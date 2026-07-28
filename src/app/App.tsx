@@ -1,122 +1,15 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef } from "react";
+import { FAGULHAS, buildFileContent, type FagulhaData } from "./fagulhas-data";
 
 const NEON = "#00FF66";
 const NEON_MID = "#2BEA7B";
 const NEON_DIM = "#0A3B23";
+const PHOTO_BG = "#e4e4e4";
 const TOP_BAR = 38;
 const BOT_BAR = 28;
 
-const MODULES = Array.from({ length: 6 }, (_, i) => ({
-  id: i,
-  label: `FAGULHA ${i + 1}`,
-  codename: `F-${(i + 1).toString().padStart(3, "0")}`,
-  level: ["ALPHA", "BETA", "ALPHA", "OMEGA", "GAMMA", "DELTA"][i],
-  size: ["2.4 MB", "1.1 MB", "8.7 MB", "512 KB", "3.3 MB", "19.2 MB"][i],
-  date: [`2047-0${i + 1}-14`],
-}));
-
-const BIOS = [
-  "Operativo implantado em infraestrutura civil. Cobertura: consultor logístico. Perfil psicológico: alto funcionamento, distante. Suscetível a engenharia social via abordagens de confiança. Última avaliação inconclusiva.",
-  "Antigo operativo de inteligência de sinais. Desertou durante a Operação IRONVEIL. Lealdades atuais não confirmadas. Possui chaves de criptografia classificadas para a rede NODE. Considerado armado e perigoso.",
-  "Ativo de cobertura profunda, adormecido por 14 meses. Sinal de ativação enviado em 2047-01-04. Sem resposta. Possível extração por parte hostil. Unidade de contra-inteligência alertada.",
-  "Criptoanalista sênior com acesso ao protocolo CIPHER. Opera sob múltiplas identidades em 9 jurisdições documentadas. Dados biométricos parcialmente corrompidos durante violação do banco de dados.",
-  "Operativo de campo especializado em guerra eletrônica. Última missão: OPERAÇÃO VECTOR. Status: FALHOU. Motivo: desconhecido. Comandante lista o ativo como MIA.",
-  "Especialista em infiltração de rede. Responsável pela arquitetura do NODE-04. Contém conhecimento proprietário do backbone NEXUS. Requer contenção imediata sob a Diretriz 12.",
-];
-
-function buildFileContent(i: number): string {
-  const mod = MODULES[i];
-  return `> Inicializando conexão segura...
-> Autenticando credenciais...
-> Carregando perfil classificado...
-
-█████████████████████████████████████
-
-NOME ..................... [REDIGIDO]
-CODINOME ................. ${mod.label}
-ID ....................... F-${(i + 1).toString().padStart(3, "0")}-${["C0FFEE7A","DEADBEEF","BADC0DE1","CAFEBABE","FEEDFACE","DEADF00D"][i]}
-STATUS ................... ATIVO
-CLASSIFICAÇÃO ............ SECRETO // NOFORN
-NÍVEL DE ACESSO .......... ${mod.level}
-AUTORIZAÇÃO .............. UMBRA CÓSMICA
-DIRETRIZ ................. ${i + 7}
-
-ÚLTIMA LOCALIZAÇÃO ....... [CRIPTOGRAFADO]
-REFERÊNCIA DE GRADE ...... ██████████████████
-TIMESTAMP ................ 2047-0${i + 1}-14 04:22:11Z
-NÓ ....................... NODE-0${i + 4}
-CANAL .................... ZETA-${i + 1}
-FORÇA DO SINAL ........... [DEGRADADO]
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-BIO
-─────────────────────────────────────
-${BIOS[i]}
-
-Última confirmação no setor ${["KAPPA-7","DELTA-3","SIGMA-9","OMEGA-1","ALPHA-5","BETA-2"][i]}
-durante a operação ${["LUZ NEGRA","APAGÃO","ECLIPSE","FANTASMA","ESPECTRO","ESPÍRITO"][i]}.
-Classificado sob a Diretriz ${i + 7}
-do Protocolo Silencioso.
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-NOTAS
-─────────────────────────────────────
-Sujeito exibe padrões de sinal anômalos
-em múltiplas frequências monitoradas.
-Todas as comunicações devem ser
-interceptadas e registradas. Última
-transmissão no NODE-0${i + 4} canal ZETA-${i + 1}.
-Classificação: POSSÍVEL HOSTIL.
-Vigilância EPSILON-${i + 7} iniciada.
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-ARQUIVOS ANEXADOS ........ ${i + 5}
-CRIPTOGRAFIA ............. AES-512-MOD
-STATUS DO PROCESSO ....... SUSPENSO
-ÚLTIMA SINCRONIZAÇÃO ..... [FALHOU]
-FATOR DE RISCO ........... CRÍTICO
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-REGISTROS
-─────────────────────────────────────
-[04:22:11] Sinal adquirido ZETA-${i + 1}
-[04:22:58] Protocolo de handshake falhou
-[04:23:01] Tentativa de reconexão #1 FALHOU
-[04:23:33] Tentativa de reconexão #2 FALHOU
-[04:23:45] PERDA DE PACOTE: 94%
-[04:24:01] CONEXÃO ENCERRADA
-[04:24:02] RASTREAMENTO INICIADO: PENDENTE
-[04:24:55] STATUS DO RASTREAMENTO: PERDIDO
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-DADOS DESCONHECIDOS
-─────────────────────────────────────
-████ ████ ████ ████ ████ ████
-████████ ████████ ████████
-█████████████████████████████
-[DECRIPTAÇÃO NÍVEL ${mod.level} NECESSÁRIA]
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-ASSINATURA
-─────────────────────────────────────
-0x${["C0FFEE7A","DEADBEEF","BADC0DE1","CAFEBABE","FEEDFACE","DEADF00D"][i]} SEAL-${(i).toString().padStart(4, "0")}
-
-HASH DE CRIPTOGRAFIA
-─────────────────────────────────────
-9f86d081884c7d659a2feaa0c55ad015
-a93a15136ba6f4b78c07b3c82a73a6ba
-f1d2d2f924e986ac86fdf7b36c94bcdf
-─────────────────────────────────────
-FIM DO REGISTRO // CLASSIFICAÇÃO: TS`;
-}
-
-const FILE_CONTENTS = MODULES.map((_, i) => buildFileContent(i));
+const MODULES = FAGULHAS;
+const FILE_CONTENTS = FAGULHAS.map((f) => buildFileContent(f));
 
 function playBeep(freq = 800, dur = 0.05, vol = 0.04) {
   try {
@@ -369,8 +262,58 @@ function FileIcon({
           {mod.label}
         </div>
         <div style={{ color: NEON_DIM, fontFamily: "'Share Tech Mono',monospace", fontSize: 8, letterSpacing: "0.1em", marginTop: 1 }}>
-          {mod.size[0]} · {mod.level}
+          {mod.size} · {mod.level}
         </div>
+      </div>
+    </div>
+  );
+}
+
+// ── CLASSIFIED PHOTO ──────────────────────────────────────────────────────
+
+function ClassifiedPhoto({
+  label,
+  src,
+  alt,
+}: {
+  label: string;
+  src: string;
+  alt: string;
+}) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      <div
+        style={{
+          color: NEON_DIM,
+          fontFamily: "'Share Tech Mono',monospace",
+          fontSize: 8,
+          letterSpacing: "0.18em",
+        }}
+      >
+        {label}
+      </div>
+      <div
+        style={{
+          background: PHOTO_BG,
+          border: "1px solid rgba(0,255,102,0.28)",
+          padding: 10,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          minHeight: 140,
+          boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.06)",
+        }}
+      >
+        <img
+          src={src}
+          alt={alt}
+          style={{
+            maxWidth: "100%",
+            maxHeight: 160,
+            objectFit: "contain",
+            display: "block",
+          }}
+        />
       </div>
     </div>
   );
@@ -390,7 +333,7 @@ function InfoPanel({
   const typeRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const content = FILE_CONTENTS[selectedId];
-  const mod = MODULES[selectedId];
+  const mod = FAGULHAS[selectedId];
 
   useEffect(() => {
     let i = 0;
@@ -423,8 +366,8 @@ function InfoPanel({
         position: "fixed",
         top: TOP_BAR + 8,
         bottom: BOT_BAR + 8,
-        left: "10%",
-        right: "10%",
+        left: "4%",
+        right: "4%",
         display: "flex",
         flexDirection: "column",
         zIndex: 40,
@@ -455,32 +398,66 @@ function InfoPanel({
         </div>
       </div>
 
-      {/* Body */}
+      {/* Body — dossiê: fotos à esquerda, texto à direita */}
       <div
-        ref={scrollRef}
         style={{
           flex: 1,
-          overflowY: "auto",
-          padding: "16px 20px",
+          display: "flex",
+          minHeight: 0,
           background: "rgba(2,5,3,0.93)",
           border: "1px solid rgba(0,255,102,0.22)",
           boxShadow: "inset 0 0 60px rgba(0,0,0,0.6)",
-          scrollbarWidth: "none",
         }}
       >
-        <pre
+        {/* Coluna de fotos */}
+        <div
           style={{
-            fontFamily: "'Share Tech Mono','JetBrains Mono',monospace",
-            fontSize: 11,
-            lineHeight: 1.75,
-            color: NEON_MID,
-            whiteSpace: "pre-wrap",
-            margin: 0,
+            width: 240,
+            flexShrink: 0,
+            padding: "16px 14px",
+            display: "flex",
+            flexDirection: "column",
+            gap: 16,
+            borderRight: "1px solid rgba(0,255,102,0.18)",
+            background: "rgba(0,255,102,0.02)",
           }}
         >
-          {typedText}
-          <span style={{ color: NEON, opacity: cursor ? 1 : 0 }}>█</span>
-        </pre>
+          <ClassifiedPhoto
+            label="ANEXO A // ARTWORK"
+            src={mod.artwork}
+            alt={`Artwork ${mod.label}`}
+          />
+          <ClassifiedPhoto
+            label="ANEXO B // LÂMPADA"
+            src={mod.lampada}
+            alt={`Lâmpada ${mod.label}`}
+          />
+        </div>
+
+        {/* Coluna de texto */}
+        <div
+          ref={scrollRef}
+          style={{
+            flex: 1,
+            overflowY: "auto",
+            padding: "16px 20px",
+            scrollbarWidth: "none",
+          }}
+        >
+          <pre
+            style={{
+              fontFamily: "'Share Tech Mono','JetBrains Mono',monospace",
+              fontSize: 11,
+              lineHeight: 1.75,
+              color: NEON_MID,
+              whiteSpace: "pre-wrap",
+              margin: 0,
+            }}
+          >
+            {typedText}
+            <span style={{ color: NEON, opacity: cursor ? 1 : 0 }}>█</span>
+          </pre>
+        </div>
       </div>
 
       {/* Return */}
