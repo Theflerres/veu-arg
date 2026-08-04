@@ -1,5 +1,13 @@
 import React, { useState, useEffect, useRef } from "react";
 import { FAGULHAS, buildFileContent, type FagulhaData } from "./fagulhas-data";
+import {
+  playClick,
+  playBack,
+  playError,
+  playSuccess,
+  startGlitchSound,
+  stopGlitchSound,
+} from "./sounds";
 
 const NEON = "#00FF66";
 const NEON_MID = "#2BEA7B";
@@ -10,33 +18,6 @@ const BOT_BAR = 28;
 
 const MODULES = FAGULHAS;
 const FILE_CONTENTS = FAGULHAS.map((f) => buildFileContent(f));
-
-function playBeep(freq = 800, dur = 0.05, vol = 0.04) {
-  try {
-    const ctx = new AudioContext();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.frequency.value = freq;
-    osc.type = "square";
-    gain.gain.setValueAtTime(vol, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur);
-    osc.start();
-    osc.stop(ctx.currentTime + dur);
-  } catch {}
-}
-
-function playError() {
-  playBeep(220, 0.15, 0.06);
-  setTimeout(() => playBeep(180, 0.2, 0.05), 120);
-}
-
-function playSuccess() {
-  playBeep(440, 0.08, 0.04);
-  setTimeout(() => playBeep(660, 0.08, 0.04), 80);
-  setTimeout(() => playBeep(880, 0.12, 0.04), 160);
-}
 
 function useUptime() {
   const [uptime, setUptime] = useState("12:48:22");
@@ -562,15 +543,13 @@ function MeltOverlay({ onDone }: { onDone: () => void }) {
       clearInterval(alertIv);
       clearTimeout(t1);
       clearTimeout(t2);
+      stopGlitchSound();
     };
   }, []);
 
-  // Play glitch sounds
   useEffect(() => {
-    const iv = setInterval(() => {
-      playBeep(100 + Math.random() * 400, 0.06 + Math.random() * 0.1, 0.06);
-    }, 150);
-    return () => clearInterval(iv);
+    startGlitchSound();
+    return () => stopGlitchSound();
   }, []);
 
   return (
@@ -980,13 +959,13 @@ function MainTerminal() {
     if (showPanel) return;
     setSelectedId(id);
     setTimeout(() => setShowPanel(true), 50);
-    playBeep(660, 0.06, 0.04);
+    playClick();
   };
 
   const handleReturn = () => {
     setShowPanel(false);
     setTimeout(() => setSelectedId(null), 400);
-    playBeep(440, 0.06, 0.04);
+    playBack();
   };
 
   return (

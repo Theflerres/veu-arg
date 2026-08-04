@@ -5,10 +5,15 @@
   "type": "module",
   "scripts": {
     "build": "vite build",
-    "dev": "vite"
+    "build:pages": "cross-env GITHUB_PAGES=true vite build",
+    "dev": "vite",
+    "preview": "vite preview",
+    "preview:pages": "cross-env GITHUB_PAGES=true vite preview"
   },
   "dependencies": {
-    "@emotion/react": "11.14.0",
+    "@fontsource/jetbrains-mono": "^5.2.5",
+    "@fontsource/share-tech-mono": "^5.2.5",
+    "@fontsource/vt323": "^5.2.5",
     "@emotion/styled": "11.14.1",
     "@mui/material": "7.3.5",
     "@popperjs/core": "2.11.8",
@@ -66,6 +71,7 @@
   "devDependencies": {
     "@tailwindcss/vite": "4.1.12",
     "@vitejs/plugin-react": "4.7.0",
+    "cross-env": "^7.0.3",
     "tailwindcss": "4.1.12",
     "vite": "6.3.5"
   },
