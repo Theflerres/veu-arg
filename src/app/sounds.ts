@@ -6,6 +6,9 @@ export const SOUND_FILES = {
   error: "error.mp3",
   success: "success.mp3",
   glitch: "glitch.mp3",
+  background: "background.mp3",
+  jingle: "jingle.mp3",
+  chat: "Chat.mp3", // nome do arquivo com "C" maiúsculo — GitHub Pages é case-sensitive
 } as const;
 
 export type SoundName = keyof typeof SOUND_FILES;
@@ -80,6 +83,14 @@ export async function playSuccess() {
   }
 }
 
+// Evento A (Chat) — toca ao abrir o widget de chat flutuante
+export async function playChatSound() {
+  if (!(await play("chat", 0.5))) {
+    playOscillatorBeep(700, 0.05, 0.04);
+    setTimeout(() => playOscillatorBeep(900, 0.05, 0.04), 90);
+  }
+}
+
 export function startGlitchSound() {
   try {
     if (!glitchLoop) {
@@ -107,5 +118,58 @@ export function stopGlitchSound() {
   if (glitchLoop) {
     glitchLoop.pause();
     glitchLoop.currentTime = 0;
+  }
+}
+
+// Evento B — toca glitch.mp3 uma única vez, do início ao fim, sem loop.
+// Usa uma instância própria (não a `glitchLoop` do MeltOverlay) para não interferir
+// com o loop de glitch usado no fluxo de senha incorreta.
+export async function playGlitchOnce() {
+  if (!(await play("glitch", 0.5))) {
+    playOscillatorBeep(120, 0.3, 0.06);
+  }
+}
+
+// ── MÚSICA AMBIENTE ─────────────────────────────────────────────────────────
+//  toca em loop contínuo; jingle.mp3 aparece periodicamente
+// "solto" por cima, sem parar nenhum áudio já tocando (instância própria).
+
+export const AMBIENT_CONFIG = {
+  JINGLE_INTERVAL_MS: 20 * 60 * 1000, // a cada 20 minutos
+};
+
+let bgMusic: HTMLAudioElement | null = null;
+
+export function startBackgroundMusic(volume = 0.18) {
+  try {
+    if (!bgMusic) {
+      bgMusic = new Audio(soundUrl("background"));
+      bgMusic.loop = true;
+    }
+    bgMusic.volume = volume;
+    void bgMusic.play().catch(() => {
+      /* autoplay bloqueado pelo navegador — ignora, sem som ambiente até o próximo gesto do usuário */
+    });
+  } catch {
+    /* ignore */
+  }
+}
+
+export function stopBackgroundMusic() {
+  if (bgMusic) {
+    bgMusic.pause();
+    bgMusic.currentTime = 0;
+  }
+}
+
+export function playJingle(volume = 0.4) {
+  try {
+    const jingle = new Audio(soundUrl("jingle"));
+    jingle.volume = volume;
+    void jingle.play().catch(() => {
+      /* ignore */
+    });
+  } catch {
+    /* ignore */
   }
 }

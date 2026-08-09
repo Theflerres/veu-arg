@@ -52,12 +52,22 @@ export const FAGULHAS: FagulhaData[] = [
   {
     id: 0,
     label: "Fagulha #",
+    codename: "Parasita",
     level: "ALPHA",
     size: "2.4 MB",
     artwork: artwork1,
     lampada: lampada1,
     idCode: "3D 7A 1F 62",
-    ...CENSURADO_1,
+    nome: "████████",
+    status: "56 69 76 6F",
+    classificacao: "63 61 72 65 6e 74 65",
+    bio: `> IDADE: ██ | ALTURA: ████ (terceiro mais baixo entre os Fagulhas)\n\nPossui cabelos loiros curtos, veste sempre um terno branco e tem a pele clara como a neve, o motivo dessa tonalidade █████████████████████.
+    Vive em isolamento quase completo, sem demonstrar apreço genuíno pela maioria dos outros Fagulhas.`,
+    notas: `███████ é sua companhia genuína mais próxima: aguarda-o ansiosamente sentado de frente pra porta, e sua ansiedade aumenta bastante quando ele se despede. ███████ é sua segunda opção, visitando-o com frequência e oferecendo companhia silenciosa mesmo sem participar de █████████████.
+    O quarto de Parasita ███████ sua ██████████, ███████, ████ e ████████; quando ganha papel e giz de cera, desenha a si mesmo, seu █████ e, às vezes, ███████, mas tem receio de mostrar essas últimas, temendo ser ████████ e ████████████. 
+    Só sai do quarto acompanhado por ███████, e anuncia sua chegada fazendo barulho com as botas. Demonstra liderança e autoconfiança marcantes, tomando a frente das situações e evitando qualquer sinal de fragilidade, mas os registros sugerem que essa postura é, na verdade, █████████████████████████████████████████████ de ████████████. 
+    Quanto mais seguro aparenta, maior tende a ser ██████████████ de quem considera ██████████; a simples possibilidade de ████████ é suficiente pra desmontar toda essa confiança. Gosta de liderar, ser ouvido e permanecer perto de quem confia; não gosta de ███████████, de parecer ██████████ e, acima de tudo, de ser ████████████.`,
+    registros: `Evento registrado: tentou comandar os demais Fagulhas durante uma brincadeira, impondo suas próprias regras; diante da recusa, ████████ e retornou ao quarto. O codinome "Parasita" foi atribuído pela sua ████████ e intensa dependência emocional. Todas as conclusões aqui foram obtidas unicamente por dias de observação.`
   },
   {
     id: 1,
@@ -81,14 +91,43 @@ export const FAGULHAS: FagulhaData[] = [
   {
     id: 2,
     label: "Fagulha #",
-    codename: "F-###",
+    codename: "Andrômeda",
     level: "GAMMA",
     size: "3.3 MB",
     artwork: artwork3,
     lampada: lampada3,
-    idCode: "5F 12 9B 3A",
-    ...CENSURADO_2,
+    idCode: "6F 3B 9A 4D",
+    nome: "████████",
+    status: "56 69 76 6F", 
+    classificacao: "61 66 65 74 6f 73 61",
+    bio: `> IDADE: ████████ | ALTURA: ████████\n\nCostuma passar boa parte do dia explorando tudo o que desperta sua curiosidade, decorando sua ██████ com objetos e desenhos relacionados às estrelas e ao espaço.
+    Antes de dormir, gosta de observar as estrelas no teto de sua ██████ e imaginar quantos segredos o universo ainda guarda.`,
+    notas: `Adora organizar pequenas festas do chá para outras Fagulhas, inventar brincadeiras e fazer companhia para quem estiver triste ou isolado, oferecendo um lugar confortável para conversar ou simplesmente ficar em silêncio ao lado da pessoa.
+    Gosta de estrelas, festas do chá, observar o céu, fazer novas descobertas, ouvir as histórias dos outros Fagulhas, abraços e deixar as pessoas felizes; não gosta de ver alguém triste ou sozinho, de discussões, de ambientes muito silenciosos e da ideia de que alguém não se sinta seguro.`,
+    registros: `█████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████
+    ██████████████████████████████████████████████████████████████████████████████████████████████████████ 
+    ████████████████████████
+    ██████████████████
+    ██████
+    ████████████████████████
+    
+    ██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████
+    ████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████
+    ██████████████████████████████████████████████████████████████████████████████
+    ██████████████████████████████████████████
+    
+    ████████████████████████████████████████████████████████████████████████████████████
+    ████████████████████████████████████████████████████████████████████████████████████
+    ██████████████████████████████████████████████████████████████████████████████████████████████████████
+    ██████████████████████████████████████████████████████████████████
+    ████████████████████████████████████████████████████████████
+    ██████████████████████████████████████████
+    ██████████████████
+    ████████████
+    ██████████████████████████████
+    ████████████████████████████████████████████████████████████.`
   },
+
   {
     id: 3,
     label: "Fagulha #",

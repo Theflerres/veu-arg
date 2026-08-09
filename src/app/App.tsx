@@ -7,7 +7,15 @@ import {
   playSuccess,
   startGlitchSound,
   stopGlitchSound,
+  playGlitchOnce,
+  startBackgroundMusic,
+  stopBackgroundMusic,
+  playJingle,
+  AMBIENT_CONFIG,
 } from "./sounds";
+import { useArgEngine } from "./arg-engine";
+import { ChatWidget } from "./components/ChatWidget";
+import { IntrusionOverlay } from "./components/IntrusionOverlay";
 
 const NEON = "#00FF66";
 const NEON_MID = "#2BEA7B";
@@ -119,13 +127,27 @@ function FileIcon({
   onClick,
   isSelected,
   isHidden,
+  glitchActive = false,
 }: {
   mod: (typeof MODULES)[0];
   onClick: () => void;
   isSelected: boolean;
   isHidden: boolean;
+  glitchActive?: boolean;
 }) {
   const [hov, setHov] = useState(false);
+  const [glitchText, setGlitchText] = useState("");
+
+  // Evento B, Fase 1
+  useEffect(() => {
+    if (!glitchActive) return;
+    const iv = setInterval(() => {
+      setGlitchText(
+        Array.from({ length: 12 }, () => GLITCH_CHARS[Math.floor(Math.random() * GLITCH_CHARS.length)]).join("")
+      );
+    }, 60);
+    return () => clearInterval(iv);
+  }, [glitchActive]);
 
   return (
     <div
@@ -151,11 +173,35 @@ function FileIcon({
           height: 80,
           transition: "transform 0.2s ease, filter 0.2s ease",
           transform: hov ? "translateY(-4px) scale(1.06)" : "none",
-          filter: hov
+          filter: glitchActive
+            ? "hue-rotate(140deg) saturate(3)"
+            : hov
             ? `drop-shadow(0 0 14px ${NEON}) drop-shadow(0 0 28px rgba(0,255,102,0.35))`
             : `drop-shadow(0 0 4px rgba(0,255,102,0.3))`,
         }}
       >
+        {glitchActive && (
+          <div
+            style={{
+              position: "absolute",
+              inset: -4,
+              zIndex: 5,
+              background: "rgba(255,0,51,0.18)",
+              color: "#FF3333",
+              fontFamily: "'Share Tech Mono',monospace",
+              fontSize: 9,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              textAlign: "center",
+              whiteSpace: "pre-wrap",
+              pointerEvents: "none",
+              animation: "blink 0.15s step-end infinite",
+            }}
+          >
+            {glitchText}
+          </div>
+        )}
         {/* Main page body */}
         <div
           style={{
@@ -955,8 +1001,59 @@ function MainTerminal() {
   const uptime = useUptime();
   const hexBar = useRollingHex(18);
 
+  // ── ARG EVENTS ────────────────────────────────────────────────────────
+  const [showChat, setShowChat] = useState(false);
+  const [intrusionPhase, setIntrusionPhase] = useState<"idle" | "deleting" | "logs">("idle");
+  const [glitchingId, setGlitchingId] = useState<number | null>(null);
+  const [deletedIds, setDeletedIds] = useState<Set<number>>(new Set());
+  const intrusionTimeouts = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  const startIntrusion = () => {
+    if (intrusionPhase !== "idle") return;
+    setShowPanel(false);
+    setIntrusionPhase("deleting");
+    setDeletedIds(new Set());
+    playGlitchOnce();
+
+    let cumulative = 300;
+    MODULES.forEach((mod) => {
+      intrusionTimeouts.current.push(setTimeout(() => setGlitchingId(mod.id), cumulative));
+      cumulative += 550;
+      intrusionTimeouts.current.push(
+        setTimeout(() => {
+          setDeletedIds((prev) => new Set(prev).add(mod.id));
+          setGlitchingId(null);
+        }, cumulative)
+      );
+    });
+    intrusionTimeouts.current.push(setTimeout(() => setIntrusionPhase("logs"), cumulative + 500));
+  };
+
+  const finishIntrusion = () => {
+    setIntrusionPhase("idle");
+    setDeletedIds(new Set());
+    setGlitchingId(null);
+  };
+
+  useEffect(() => () => intrusionTimeouts.current.forEach(clearTimeout), []);
+
+  // Música ambiente em loop + jingle periódico "solto" por cima
+  useEffect(() => {
+    startBackgroundMusic();
+    const jingleIv = setInterval(() => playJingle(), AMBIENT_CONFIG.JINGLE_INTERVAL_MS);
+    return () => {
+      clearInterval(jingleIv);
+      stopBackgroundMusic();
+    };
+  }, []);
+
+  useArgEngine(true, {
+    onChatEvent: () => setShowChat(true),
+    onIntrusionEvent: startIntrusion,
+  });
+
   const handleFileClick = (id: number) => {
-    if (showPanel) return;
+    if (showPanel || intrusionPhase !== "idle") return;
     setSelectedId(id);
     setTimeout(() => setShowPanel(true), 50);
     playClick();
@@ -1014,7 +1111,17 @@ function MainTerminal() {
           zIndex: 20,
         }}
       >
-        <span style={{ color: NEON, fontFamily: "'VT323',monospace", fontSize: 20, letterSpacing: "0.08em" }}>■ SISTEMA ONLINE</span>
+        <span
+          style={{
+            color: intrusionPhase !== "idle" ? "#FF3333" : NEON,
+            fontFamily: "'VT323',monospace",
+            fontSize: 20,
+            letterSpacing: "0.08em",
+            animation: intrusionPhase !== "idle" ? "blink 0.4s step-end infinite" : "none",
+          }}
+        >
+          {intrusionPhase !== "idle" ? "■ [CRITICAL_SECURITY_BREACH]" : "■ SISTEMA ONLINE"}
+        </span>
         <div style={{ display: "flex", alignItems: "center", gap: 5, color: NEON_MID, fontSize: 9, letterSpacing: "0.13em" }}>
           <span style={{ color: NEON, animation: "blink 2s step-end infinite" }}>●</span>
           CONEXÃO SEGURA
@@ -1045,9 +1152,9 @@ function MainTerminal() {
           justifyContent: "center",
           gap: 32,
           zIndex: 10,
-          opacity: showPanel ? 0.05 : 1,
+          opacity: showPanel || intrusionPhase === "logs" ? 0.05 : 1,
           transition: "opacity 0.45s ease",
-          pointerEvents: showPanel ? "none" : "auto",
+          pointerEvents: showPanel || intrusionPhase !== "idle" ? "none" : "auto",
         }}
       >
         {/* Header */}
@@ -1068,7 +1175,8 @@ function MainTerminal() {
                   mod={mod}
                   onClick={() => handleFileClick(mod.id)}
                   isSelected={selectedId === mod.id}
-                  isHidden={false}
+                  isHidden={deletedIds.has(mod.id)}
+                  glitchActive={glitchingId === mod.id}
                 />
               ))}
             </div>
@@ -1085,6 +1193,12 @@ function MainTerminal() {
       {showPanel && selectedId !== null && (
         <InfoPanel selectedId={selectedId} onReturn={handleReturn} />
       )}
+
+      {/* Evento A — chat flutuante */}
+      {showChat && <ChatWidget onClose={() => setShowChat(false)} />}
+
+      {/* Evento B, Fase 2 — terminal de emergência em tela cheia */}
+      {intrusionPhase === "logs" && <IntrusionOverlay onDone={finishIntrusion} />}
 
       {/* Bottom bar */}
       <div
@@ -1135,6 +1249,7 @@ export default function App() {
         @keyframes tear-move0{0%{transform:translateX(0)}100%{transform:translateX(-30px)}}
         @keyframes tear-move1{0%{transform:translateX(0)}100%{transform:translateX(20px)}}
         @keyframes tear-move2{0%{transform:translateX(0)}100%{transform:translateX(-15px)}}
+        @keyframes chat-slide-in{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
         ::-webkit-scrollbar{display:none}
       `}</style>
 
