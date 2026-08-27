@@ -12,7 +12,6 @@ declare global {
   interface Window {
     debugARG?: {
       triggerChat: () => void;
-      triggerIntrusion: () => void;
       resetTimer: () => void;
       getAccumulatedMinutes: () => number;
     };
@@ -34,17 +33,13 @@ export const ARG_CONFIG = {
   CHAT_SHORT_DELAY_MS: 30 * 60 * 1000,
   CHAT_LONG_DELAY_MS: 40 * 60 * 1000,
 
-  // Evento B — Falsa detecção de invasão: garantido, não é mais por chance.
-  // Primeiro disparo aos 40min de tempo ativo acumulado; depois, a cada 3h.
-  INTRUSION_FIRST_TRIGGER_MS: 40 * 60 * 1000,
-  INTRUSION_REPEAT_INTERVAL_MS: 3 * 60 * 60 * 1000,
+  // Evento B (falsa detecção de invasão / firewall) foi removido na fase Grupos.
 };
 
 interface StoredState {
   accumulatedMs: number;
   nextChatAtMs?: number;
   chatCount?: number;
-  nextIntrusionAtMs?: number;
 }
 
 function loadState(): StoredState {
@@ -70,7 +65,6 @@ export function resetArgTimer() {
     accumulatedMs: 0,
     nextChatAtMs: ARG_CONFIG.CHAT_FIRST_DELAY_MS,
     chatCount: 0,
-    nextIntrusionAtMs: ARG_CONFIG.INTRUSION_FIRST_TRIGGER_MS,
   });
 }
 
@@ -80,7 +74,6 @@ export function getAccumulatedMs(): number {
 
 interface ArgEventHandlers {
   onChatEvent: () => void;
-  onIntrusionEvent: () => void;
 }
 
 /**
@@ -115,26 +108,13 @@ export function useArgEngine(active: boolean, handlers: ArgEventHandlers) {
     };
   }, [active]);
 
-  // Ciclo de verificação dos eventos agendados (chat e intrusão, ambos determinísticos)
+  // Ciclo de verificação do evento de chat agendado
   useEffect(() => {
     if (!active) return;
 
     const cycle = setInterval(() => {
       const state = loadState();
       const accumulated = state.accumulatedMs;
-
-      // Evento B — garantido aos 40min, depois a cada 3h (sem sorteio)
-      const nextIntrusionAtMs =
-        state.nextIntrusionAtMs ?? ARG_CONFIG.INTRUSION_FIRST_TRIGGER_MS;
-
-      if (accumulated >= nextIntrusionAtMs) {
-        handlersRef.current.onIntrusionEvent();
-        saveState({
-          ...state,
-          nextIntrusionAtMs: nextIntrusionAtMs + ARG_CONFIG.INTRUSION_REPEAT_INTERVAL_MS,
-        });
-        return;
-      }
 
       const nextChatAtMs =
         state.nextChatAtMs ?? ARG_CONFIG.CHAT_FIRST_DELAY_MS;
@@ -161,12 +141,11 @@ export function useArgEngine(active: boolean, handlers: ArgEventHandlers) {
   useEffect(() => {
     window.debugARG = {
       triggerChat: () => handlersRef.current.onChatEvent(),
-      triggerIntrusion: () => handlersRef.current.onIntrusionEvent(),
       resetTimer: () => resetArgTimer(),
       getAccumulatedMinutes: () => Math.floor(getAccumulatedMs() / 60000),
     };
     console.log(
-      "%c[ARG] window.debugARG pronto — triggerChat() · triggerIntrusion() · resetTimer()",
+      "%c[ARG] window.debugARG pronto — triggerChat() · resetTimer()",
       "color:#00FF66"
     );
     return () => {

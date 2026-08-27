@@ -16,6 +16,8 @@ export type SoundName = keyof typeof SOUND_FILES;
 const cache = new Map<SoundName, HTMLAudioElement>();
 let glitchLoop: HTMLAudioElement | null = null;
 let glitchFallbackInterval: ReturnType<typeof setInterval> | null = null;
+// Instâncias criadas na hora (jingle) — registradas para o stopAllAudio() alcançar.
+const looseSounds = new Set<HTMLAudioElement>();
 
 function soundUrl(name: SoundName): string {
   return `${BASE}sounds/${SOUND_FILES[name]}`;
@@ -166,10 +168,40 @@ export function playJingle(volume = 0.4) {
   try {
     const jingle = new Audio(soundUrl("jingle"));
     jingle.volume = volume;
+    looseSounds.add(jingle);
+    jingle.addEventListener("ended", () => looseSounds.delete(jingle), { once: true });
     void jingle.play().catch(() => {
-      /* ignore */
+      looseSounds.delete(jingle);
     });
   } catch {
     /* ignore */
   }
+}
+
+// ── SILÊNCIO TOTAL ──────────────────────────────────────────────────────────
+// Para tudo que estiver tocando: música ambiente, jingles soltos, loop de
+// glitch e qualquer efeito em cache. Usado ao entrar na tela de um Grupo.
+
+export function stopAllAudio() {
+  stopBackgroundMusic();
+  stopGlitchSound();
+
+  for (const audio of cache.values()) {
+    try {
+      audio.pause();
+      audio.currentTime = 0;
+    } catch {
+      /* ignore */
+    }
+  }
+
+  for (const audio of looseSounds) {
+    try {
+      audio.pause();
+      audio.currentTime = 0;
+    } catch {
+      /* ignore */
+    }
+  }
+  looseSounds.clear();
 }

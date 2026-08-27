@@ -1,21 +1,20 @@
 import React, { useState, useEffect, useRef } from "react";
 import { FAGULHAS, buildFileContent, type FagulhaData } from "./fagulhas-data";
+import { GRUPOS } from "./grupos-data";
 import {
-  playClick,
   playBack,
   playError,
   playSuccess,
   startGlitchSound,
   stopGlitchSound,
-  playGlitchOnce,
   startBackgroundMusic,
   stopBackgroundMusic,
+  stopAllAudio,
   playJingle,
   AMBIENT_CONFIG,
 } from "./sounds";
 import { useArgEngine } from "./arg-engine";
 import { ChatWidget } from "./components/ChatWidget";
-import { IntrusionOverlay } from "./components/IntrusionOverlay";
 
 const NEON = "#00FF66";
 const NEON_MID = "#2BEA7B";
@@ -24,7 +23,9 @@ const PHOTO_BG = "#e4e4e4";
 const TOP_BAR = 38;
 const BOT_BAR = 28;
 
-const MODULES = FAGULHAS;
+// Fase atual: os arquivos das Fagulhas ficam fora de exibição (os dados
+// seguem intactos em `fagulhas-data.ts`) e a tela lista os Grupos.
+const MODULES = GRUPOS;
 const FILE_CONTENTS = FAGULHAS.map((f) => buildFileContent(f));
 
 function useUptime() {
@@ -125,29 +126,11 @@ function CRTOverlays() {
 function FileIcon({
   mod,
   onClick,
-  isSelected,
-  isHidden,
-  glitchActive = false,
 }: {
   mod: (typeof MODULES)[0];
   onClick: () => void;
-  isSelected: boolean;
-  isHidden: boolean;
-  glitchActive?: boolean;
 }) {
   const [hov, setHov] = useState(false);
-  const [glitchText, setGlitchText] = useState("");
-
-  // Evento B, Fase 1
-  useEffect(() => {
-    if (!glitchActive) return;
-    const iv = setInterval(() => {
-      setGlitchText(
-        Array.from({ length: 12 }, () => GLITCH_CHARS[Math.floor(Math.random() * GLITCH_CHARS.length)]).join("")
-      );
-    }, 60);
-    return () => clearInterval(iv);
-  }, [glitchActive]);
 
   return (
     <div
@@ -160,8 +143,6 @@ function FileIcon({
         alignItems: "center",
         gap: 8,
         cursor: "pointer",
-        opacity: isHidden ? 0 : 1,
-        transition: "opacity 0.4s ease",
         userSelect: "none",
       }}
     >
@@ -173,35 +154,11 @@ function FileIcon({
           height: 80,
           transition: "transform 0.2s ease, filter 0.2s ease",
           transform: hov ? "translateY(-4px) scale(1.06)" : "none",
-          filter: glitchActive
-            ? "hue-rotate(140deg) saturate(3)"
-            : hov
+          filter: hov
             ? `drop-shadow(0 0 14px ${NEON}) drop-shadow(0 0 28px rgba(0,255,102,0.35))`
             : `drop-shadow(0 0 4px rgba(0,255,102,0.3))`,
         }}
       >
-        {glitchActive && (
-          <div
-            style={{
-              position: "absolute",
-              inset: -4,
-              zIndex: 5,
-              background: "rgba(255,0,51,0.18)",
-              color: "#FF3333",
-              fontFamily: "'Share Tech Mono',monospace",
-              fontSize: 9,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              textAlign: "center",
-              whiteSpace: "pre-wrap",
-              pointerEvents: "none",
-              animation: "blink 0.15s step-end infinite",
-            }}
-          >
-            {glitchText}
-          </div>
-        )}
         {/* Main page body */}
         <div
           style={{
@@ -347,6 +304,8 @@ function ClassifiedPhoto({
 }
 
 // ── INFO PANEL ─────────────────────────────────────────────────────────────
+// Dossiê das Fagulhas. Mantido no código (junto de `fagulhas-data.ts`) mas
+// fora de exibição na fase Grupos — nada aqui é renderizado no momento.
 
 function InfoPanel({
   selectedId,
@@ -993,75 +952,171 @@ function PasswordScreen({ onSuccess, onTriesExhausted }: { onSuccess: () => void
   );
 }
 
+// ── GRUPO — TELA BLOQUEADA ─────────────────────────────────────────────────
+// Tela preta em cheia, sem áudio, com um campo de senha puramente decorativo
+// (desabilitado) e a frase do grupo em vermelho logo abaixo.
+
+const LOCK_RED = "#FF3333";
+
+function LockIcon({ size = 18 }: { size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="rgba(255,51,51,0.75)"
+      strokeWidth={1.8}
+      strokeLinecap="square"
+      aria-hidden="true"
+      style={{ flexShrink: 0, display: "block" }}
+    >
+      <rect x="4" y="10.5" width="16" height="10.5" />
+      <path d="M8 10.5V7a4 4 0 0 1 8 0v3.5" />
+      <path d="M12 14.5v3" />
+    </svg>
+  );
+}
+
+function GrupoLockScreen({
+  grupo,
+  onReturn,
+}: {
+  grupo: (typeof MODULES)[0];
+  onReturn: () => void;
+}) {
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "#000",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 18,
+        // acima dos overlays de CRT e de qualquer widget: preto de verdade
+        zIndex: 600,
+        cursor: "default",
+      }}
+    >
+      {/* Campo de senha — decorativo, sempre bloqueado */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 12,
+          border: "1px solid rgba(255,51,51,0.35)",
+          background: "#000",
+          padding: "12px 18px",
+          minWidth: 340,
+        }}
+      >
+        <LockIcon />
+        <input
+          type="password"
+          value=""
+          readOnly
+          disabled
+          aria-label={`Senha — ${grupo.label} (bloqueado)`}
+          placeholder="••••••••"
+          onChange={() => {}}
+          style={{
+            flex: 1,
+            background: "transparent",
+            border: "none",
+            outline: "none",
+            color: "rgba(255,255,255,0.35)",
+            fontFamily: "'Share Tech Mono',monospace",
+            fontSize: 16,
+            letterSpacing: "0.2em",
+            cursor: "not-allowed",
+          }}
+        />
+      </div>
+
+      {/* Frase do grupo */}
+      <div
+        style={{
+          color: LOCK_RED,
+          fontFamily: "'Share Tech Mono',monospace",
+          fontSize: 13,
+          letterSpacing: "0.06em",
+          lineHeight: 1.6,
+          textAlign: "center",
+          maxWidth: 520,
+          padding: "0 20px",
+        }}
+      >
+        {grupo.phrase}
+      </div>
+
+      {/* Saída discreta */}
+      <button
+        onClick={onReturn}
+        style={{
+          position: "fixed",
+          bottom: 20,
+          left: 20,
+          fontFamily: "'Share Tech Mono',monospace",
+          fontSize: 10,
+          letterSpacing: "0.18em",
+          color: "rgba(255,255,255,0.22)",
+          background: "transparent",
+          border: "none",
+          padding: 6,
+          cursor: "pointer",
+          transition: "color 0.2s ease",
+        }}
+        onMouseEnter={(e) => { e.currentTarget.style.color = "rgba(255,255,255,0.6)"; }}
+        onMouseLeave={(e) => { e.currentTarget.style.color = "rgba(255,255,255,0.22)"; }}
+      >
+        &lt; VOLTAR
+      </button>
+    </div>
+  );
+}
+
 // ── MAIN TERMINAL ──────────────────────────────────────────────────────────
 
 function MainTerminal() {
-  const [selectedId, setSelectedId] = useState<number | null>(null);
-  const [showPanel, setShowPanel] = useState(false);
+  const [activeGrupoId, setActiveGrupoId] = useState<number | null>(null);
   const uptime = useUptime();
   const hexBar = useRollingHex(18);
 
   // ── ARG EVENTS ────────────────────────────────────────────────────────
   const [showChat, setShowChat] = useState(false);
-  const [intrusionPhase, setIntrusionPhase] = useState<"idle" | "deleting" | "logs">("idle");
-  const [glitchingId, setGlitchingId] = useState<number | null>(null);
-  const [deletedIds, setDeletedIds] = useState<Set<number>>(new Set());
-  const intrusionTimeouts = useRef<ReturnType<typeof setTimeout>[]>([]);
 
-  const startIntrusion = () => {
-    if (intrusionPhase !== "idle") return;
-    setShowPanel(false);
-    setIntrusionPhase("deleting");
-    setDeletedIds(new Set());
-    playGlitchOnce();
+  const activeGrupo = MODULES.find((m) => m.id === activeGrupoId) ?? null;
+  const inGrupo = activeGrupo !== null;
 
-    let cumulative = 300;
-    MODULES.forEach((mod) => {
-      intrusionTimeouts.current.push(setTimeout(() => setGlitchingId(mod.id), cumulative));
-      cumulative += 550;
-      intrusionTimeouts.current.push(
-        setTimeout(() => {
-          setDeletedIds((prev) => new Set(prev).add(mod.id));
-          setGlitchingId(null);
-        }, cumulative)
-      );
-    });
-    intrusionTimeouts.current.push(setTimeout(() => setIntrusionPhase("logs"), cumulative + 500));
-  };
-
-  const finishIntrusion = () => {
-    setIntrusionPhase("idle");
-    setDeletedIds(new Set());
-    setGlitchingId(null);
-  };
-
-  useEffect(() => () => intrusionTimeouts.current.forEach(clearTimeout), []);
-
-  // Música ambiente em loop + jingle periódico "solto" por cima
+  // Música ambiente em loop + jingle periódico "solto" por cima.
+  // Dentro da tela de um Grupo tudo fica em silêncio.
   useEffect(() => {
+    if (inGrupo) return;
     startBackgroundMusic();
     const jingleIv = setInterval(() => playJingle(), AMBIENT_CONFIG.JINGLE_INTERVAL_MS);
     return () => {
       clearInterval(jingleIv);
       stopBackgroundMusic();
     };
-  }, []);
+  }, [inGrupo]);
 
-  useArgEngine(true, {
+  useArgEngine(!inGrupo, {
     onChatEvent: () => setShowChat(true),
-    onIntrusionEvent: startIntrusion,
   });
 
   const handleFileClick = (id: number) => {
-    if (showPanel || intrusionPhase !== "idle") return;
-    setSelectedId(id);
-    setTimeout(() => setShowPanel(true), 50);
-    playClick();
+    if (inGrupo) return;
+    // Sem som de click aqui: a tela do Grupo entra em silêncio total.
+    stopAllAudio();
+    setShowChat(false);
+    setActiveGrupoId(id);
   };
 
   const handleReturn = () => {
-    setShowPanel(false);
-    setTimeout(() => setSelectedId(null), 400);
+    setActiveGrupoId(null);
     playBack();
   };
 
@@ -1113,14 +1168,13 @@ function MainTerminal() {
       >
         <span
           style={{
-            color: intrusionPhase !== "idle" ? "#FF3333" : NEON,
+            color: NEON,
             fontFamily: "'VT323',monospace",
             fontSize: 20,
             letterSpacing: "0.08em",
-            animation: intrusionPhase !== "idle" ? "blink 0.4s step-end infinite" : "none",
           }}
         >
-          {intrusionPhase !== "idle" ? "■ [CRITICAL_SECURITY_BREACH]" : "■ SISTEMA ONLINE"}
+          ■ SISTEMA ONLINE
         </span>
         <div style={{ display: "flex", alignItems: "center", gap: 5, color: NEON_MID, fontSize: 9, letterSpacing: "0.13em" }}>
           <span style={{ color: NEON, animation: "blink 2s step-end infinite" }}>●</span>
@@ -1152,34 +1206,23 @@ function MainTerminal() {
           justifyContent: "center",
           gap: 32,
           zIndex: 10,
-          opacity: showPanel || intrusionPhase === "logs" ? 0.05 : 1,
+          opacity: inGrupo ? 0.05 : 1,
           transition: "opacity 0.45s ease",
-          pointerEvents: showPanel || intrusionPhase !== "idle" ? "none" : "auto",
+          pointerEvents: inGrupo ? "none" : "auto",
         }}
       >
         {/* Header */}
         <div style={{ textAlign: "center" }}>
           <div style={{ color: NEON_DIM, fontFamily: "'Share Tech Mono',monospace", fontSize: 9, letterSpacing: "0.25em", marginBottom: 6 }}>
-            ■ ARQUIVOS CLASSIFICADOS // ACESSO NÍVEL ALPHA
+            ■ GRUPOS // ACESSO RESTRITO
           </div>
           <div style={{ height: 1, background: "rgba(0,255,102,0.15)", width: 400, margin: "0 auto" }} />
         </div>
 
-        {/* 2 rows of 3 files */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 40 }}>
-          {[0, 1].map((row) => (
-            <div key={row} style={{ display: "flex", gap: 52, justifyContent: "center" }}>
-              {MODULES.slice(row * 3, row * 3 + 3).map((mod) => (
-                <FileIcon
-                  key={mod.id}
-                  mod={mod}
-                  onClick={() => handleFileClick(mod.id)}
-                  isSelected={selectedId === mod.id}
-                  isHidden={deletedIds.has(mod.id)}
-                  glitchActive={glitchingId === mod.id}
-                />
-              ))}
-            </div>
+        {/* Grupos — uma linha de 3 */}
+        <div style={{ display: "flex", gap: 52, justifyContent: "center", flexWrap: "wrap" }}>
+          {MODULES.map((mod) => (
+            <FileIcon key={mod.id} mod={mod} onClick={() => handleFileClick(mod.id)} />
           ))}
         </div>
 
@@ -1189,16 +1232,13 @@ function MainTerminal() {
         </div>
       </div>
 
-      {/* Info panel */}
-      {showPanel && selectedId !== null && (
-        <InfoPanel selectedId={selectedId} onReturn={handleReturn} />
-      )}
-
       {/* Evento A — chat flutuante */}
       {showChat && <ChatWidget onClose={() => setShowChat(false)} />}
 
-      {/* Evento B, Fase 2 — terminal de emergência em tela cheia */}
-      {intrusionPhase === "logs" && <IntrusionOverlay onDone={finishIntrusion} />}
+      {/* Tela do Grupo — preta, muda e com senha bloqueada */}
+      {activeGrupo && (
+        <GrupoLockScreen grupo={activeGrupo} onReturn={handleReturn} />
+      )}
 
       {/* Bottom bar */}
       <div
