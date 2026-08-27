@@ -1219,8 +1219,16 @@ function MainTerminal() {
           <div style={{ height: 1, background: "rgba(0,255,102,0.15)", width: 400, margin: "0 auto" }} />
         </div>
 
-        {/* Grupos — uma linha de 3 */}
-        <div style={{ display: "flex", gap: 52, justifyContent: "center", flexWrap: "wrap" }}>
+        {/* Grupos — grade de 3 colunas (2 linhas de 3) */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+            columnGap: 52,
+            rowGap: 40,
+            justifyItems: "center",
+          }}
+        >
           {MODULES.map((mod) => (
             <FileIcon key={mod.id} mod={mod} onClick={() => handleFileClick(mod.id)} />
           ))}

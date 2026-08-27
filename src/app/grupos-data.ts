@@ -30,6 +30,24 @@ export const GRUPOS: GrupoData[] = [
   },
   {
     id: 1,
+    label: "Grupo - Beta",
+    codename: "Beta",
+    level: "BETA",
+    size: "-- MB",
+    phrase:
+      "Dizem que tudo depende de quem cai com você... será que vou ter sorte ou vou acabar com pessoas difíceis de lidar?",
+  },
+  {
+    id: 2,
+    label: "Grupo - Gamma",
+    codename: "Gamma",
+    level: "GAMMA",
+    size: "-- MB",
+    phrase:
+      "Ainda não faço ideia de quem serão meus colegas. O jeito é aguardar a distribuição final e torcer pelo melhor...",
+  },
+  {
+    id: 3,
     label: "Grupo - Delta",
     codename: "Delta",
     level: "DELTA",
@@ -38,7 +56,16 @@ export const GRUPOS: GrupoData[] = [
       "Eu tenho que esperar que os grupos sejam escolhidos, não tem nada ainda aqui...",
   },
   {
-    id: 2,
+    id: 4,
+    label: "Grupo - Epsilon",
+    codename: "Epsilon",
+    level: "EPSILON",
+    size: "-- MB",
+    phrase:
+      "Seja lá quem for sorteado para ficar comigo, espero que a gente consiga pelo menos se entender.",
+  },
+  {
+    id: 5,
     label: "Grupo - Omega",
     codename: "Omega",
     level: "OMEGA",
