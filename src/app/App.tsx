@@ -10,6 +10,8 @@ import {
   startBackgroundMusic,
   stopBackgroundMusic,
   stopAllAudio,
+  startHeartbeat,
+  stopHeartbeat,
   playJingle,
   AMBIENT_CONFIG,
 } from "./sounds";
@@ -985,6 +987,12 @@ function GrupoLockScreen({
   grupo: (typeof MODULES)[0];
   onReturn: () => void;
 }) {
+  // Único som da tela: o batimento, em loop, do momento em que se entra até sair.
+  useEffect(() => {
+    startHeartbeat();
+    return () => stopHeartbeat();
+  }, []);
+
   return (
     <div
       style={{

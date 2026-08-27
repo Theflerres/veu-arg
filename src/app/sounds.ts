@@ -8,6 +8,7 @@ export const SOUND_FILES = {
   glitch: "glitch.mp3",
   background: "background.mp3",
   jingle: "jingle.mp3",
+  heartbeat: "heartbeat.mp3",
   chat: "Chat.mp3", // nome do arquivo com "C" maiúsculo — GitHub Pages é case-sensitive
 } as const;
 
@@ -141,6 +142,7 @@ export const AMBIENT_CONFIG = {
 };
 
 let bgMusic: HTMLAudioElement | null = null;
+let heartbeatLoop: HTMLAudioElement | null = null;
 
 export function startBackgroundMusic(volume = 0.18) {
   try {
@@ -185,6 +187,7 @@ export function playJingle(volume = 0.4) {
 export function stopAllAudio() {
   stopBackgroundMusic();
   stopGlitchSound();
+  stopHeartbeat();
 
   for (const audio of cache.values()) {
     try {
@@ -204,4 +207,32 @@ export function stopAllAudio() {
     }
   }
   looseSounds.clear();
+}
+
+// ── HEARTBEAT ───────────────────────────────────────────────────────────────
+// Loop contínuo enquanto o usuário está dentro da tela de um Grupo.
+// Instância própria, fora do `cache`, para não ser derrubada pelo stopAllAudio()
+// que roda no momento da entrada.
+
+export function startHeartbeat(volume = 0.5) {
+  try {
+    if (!heartbeatLoop) {
+      heartbeatLoop = new Audio(soundUrl("heartbeat"));
+      heartbeatLoop.loop = true;
+    }
+    heartbeatLoop.volume = volume;
+    heartbeatLoop.currentTime = 0;
+    void heartbeatLoop.play().catch(() => {
+      /* autoplay bloqueado — sem batimento até o próximo gesto do usuário */
+    });
+  } catch {
+    /* ignore */
+  }
+}
+
+export function stopHeartbeat() {
+  if (heartbeatLoop) {
+    heartbeatLoop.pause();
+    heartbeatLoop.currentTime = 0;
+  }
 }
