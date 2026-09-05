@@ -10,6 +10,7 @@ export const SOUND_FILES = {
   jingle: "jingle.mp3",
   heartbeat: "heartbeat.mp3",
   chat: "Chat.mp3", // nome do arquivo com "C" maiúsculo — GitHub Pages é case-sensitive
+  hunterWest: "hunter-west.mp3", // easter egg do Scanner — som próprio, nada reaproveitado
 } as const;
 
 export type SoundName = keyof typeof SOUND_FILES;
@@ -143,6 +144,7 @@ export const AMBIENT_CONFIG = {
 
 let bgMusic: HTMLAudioElement | null = null;
 let heartbeatLoop: HTMLAudioElement | null = null;
+let hunterWestSound: HTMLAudioElement | null = null;
 
 export function startBackgroundMusic(volume = 0.18) {
   try {
@@ -188,6 +190,7 @@ export function stopAllAudio() {
   stopBackgroundMusic();
   stopGlitchSound();
   stopHeartbeat();
+  stopHunterWest();
 
   for (const audio of cache.values()) {
     try {
@@ -234,5 +237,37 @@ export function stopHeartbeat() {
   if (heartbeatLoop) {
     heartbeatLoop.pause();
     heartbeatLoop.currentTime = 0;
+  }
+}
+
+// ── HUNTER WEST ─────────────────────────────────────────────────────────────
+// Easter egg do Scanner de Players. O som é um arquivo próprio
+// (`public/sounds/hunter-west.mp3`) — de propósito NÃO reaproveita error.mp3
+// nem glitch.mp3. Para trocar o áudio, basta substituir esse arquivo na pasta;
+// nenhum código precisa mudar.
+//
+// Instância própria (fora do `cache`) porque o ciclo do Hunter West é curto e
+// precisa ser cortado na saída, junto com o glitch abrupto.
+
+export function playHunterWest(volume = 0.5) {
+  try {
+    if (!hunterWestSound) {
+      hunterWestSound = new Audio(soundUrl("hunterWest"));
+    }
+    hunterWestSound.volume = volume;
+    hunterWestSound.currentTime = 0;
+    void hunterWestSound.play().catch(() => {
+      /* arquivo ausente ou autoplay bloqueado — o easter egg roda mudo, sem
+         cair em nenhum som de erro/glitch emprestado de outro evento */
+    });
+  } catch {
+    /* ignore */
+  }
+}
+
+export function stopHunterWest() {
+  if (hunterWestSound) {
+    hunterWestSound.pause();
+    hunterWestSound.currentTime = 0;
   }
 }

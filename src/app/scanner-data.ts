@@ -36,13 +36,30 @@ const PLACEHOLDERS: string[] = [0, 1, 2].map((i) => {
   );
 });
 
-/** Fotos que o Scanner percorre em loop, na ordem. */
+// A foto do easter egg mora na mesma pasta, mas é retirada da rotação normal:
+// ela só entra por sorteio próprio (ver HUNTER_WEST abaixo). Qualquer arquivo
+// cujo nome contenha "hunter west" / "hunter-west" / "hunter_west" é tratado
+// assim, independente de extensão e de maiúsculas.
+const HUNTER_WEST_FILE = /hunter[-_ ]?west/i;
+
+const PHOTO_PATHS = Object.keys(PLAYER_MODULES).sort();
+const HUNTER_WEST_PATH = PHOTO_PATHS.find((path) => HUNTER_WEST_FILE.test(path));
+
+/** Fotos que o Scanner percorre em loop, na ordem. Sem o easter egg. */
 export const PLAYER_PHOTOS: string[] = (() => {
-  const found = Object.keys(PLAYER_MODULES)
-    .sort()
-    .map((path) => PLAYER_MODULES[path]);
+  const found = PHOTO_PATHS.filter((path) => path !== HUNTER_WEST_PATH).map(
+    (path) => PLAYER_MODULES[path]
+  );
   return found.length > 0 ? found : PLACEHOLDERS;
 })();
+
+/**
+ * Foto do easter egg, ou `null` se o arquivo não estiver na pasta — nesse caso
+ * o Scanner simplesmente nunca sorteia o Hunter West.
+ */
+export const HUNTER_WEST_PHOTO: string | null = HUNTER_WEST_PATH
+  ? PLAYER_MODULES[HUNTER_WEST_PATH]
+  : null;
 
 // ── VALORES FALSOS ──────────────────────────────────────────────────────────
 // Nada aqui é dado real de ninguém. O valor sorteado serve apenas de "molde":
@@ -106,3 +123,32 @@ export function buildScannerFields(): ScannerField[] {
     },
   ];
 }
+
+// ── EASTER EGG: HUNTER WEST ─────────────────────────────────────────────────
+// Perfil especial, fora da rotação normal. O que muda em relação aos outros:
+//
+//   NOME    → texto limpo, digitado e ESTÁVEL (é o único que para de embaralhar)
+//   IDADE   → embaralhamento contínuo, igual a todo mundo
+//   DIMENSÃO→ não embaralha: alterna em pisca-pisca entre o símbolo de espiral
+//             e um texto de erro (alternância binária, não caracteres aleatórios)
+//   + uma quarta linha, que nenhum outro perfil tem, digitada rápido e depois
+//     apagada com glitch
+//
+// A frequência, a duração e o resto do comportamento visual/sonoro ficam em
+// `components/PlayerScanner.tsx`.
+
+export const HUNTER_WEST = {
+  /** Único nome do painel que não embaralha — o contraste é proposital. */
+  nome: "Hunter West",
+  /** Molde da idade; segue embaralhando como nos perfis normais. */
+  idadeTemplate: "██ ANOS",
+  /**
+   * Os dois estados entre os quais a DIMENSÃO fica alternando.
+   * Se a espiral aparecer como quadradinho vazio na sua fonte, troque por outro
+   * símbolo aqui (⟳ ◉ ❂ ✺ são alternativas com suporte mais amplo).
+   */
+  espiral: "⌬",
+  erro: "[DADO INCOMPATÍVEL]",
+  /** Linha extra, exclusiva dele. */
+  extra: ">> ENTIDADE SEM CORRESPONDÊNCIA NO BANCO DE DADOS",
+} as const;
