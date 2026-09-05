@@ -17,6 +17,7 @@ import {
 } from "./sounds";
 import { useArgEngine } from "./arg-engine";
 import { ChatWidget } from "./components/ChatWidget";
+import { PlayerScanner } from "./components/PlayerScanner";
 
 const NEON = "#00FF66";
 const NEON_MID = "#2BEA7B";
@@ -1211,40 +1212,56 @@ function MainTerminal() {
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
-          justifyContent: "center",
-          gap: 32,
+          // O Scanner ocupa espaço acima dos Grupos: em telas baixas o bloco
+          // rola em vez de ser cortado (margin auto no wrapper centraliza
+          // verticalmente sem estourar como `justify-content:center` faria).
+          overflowY: "auto",
           zIndex: 10,
           opacity: inGrupo ? 0.05 : 1,
           transition: "opacity 0.45s ease",
           pointerEvents: inGrupo ? "none" : "auto",
         }}
       >
-        {/* Header */}
-        <div style={{ textAlign: "center" }}>
-          <div style={{ color: NEON_DIM, fontFamily: "'Share Tech Mono',monospace", fontSize: 9, letterSpacing: "0.25em", marginBottom: 6 }}>
-            ■ GRUPOS // ACESSO RESTRITO
-          </div>
-          <div style={{ height: 1, background: "rgba(0,255,102,0.15)", width: 400, margin: "0 auto" }} />
-        </div>
-
-        {/* Grupos — grade de 3 colunas (2 linhas de 3) */}
         <div
           style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-            columnGap: 52,
-            rowGap: 40,
-            justifyItems: "center",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: 28,
+            margin: "auto 0",
+            padding: "20px 0",
           }}
         >
-          {MODULES.map((mod) => (
-            <FileIcon key={mod.id} mod={mod} onClick={() => handleFileClick(mod.id)} />
-          ))}
-        </div>
+          {/* Scanner de Players — varredura automática no topo */}
+          <PlayerScanner />
 
-        {/* Footer hint */}
-        <div style={{ color: "rgba(0,255,102,0.12)", fontFamily: "'Share Tech Mono',monospace", fontSize: 8, letterSpacing: "0.2em" }}>
-          CLIQUE EM UM ARQUIVO PARA ACESSAR
+          {/* Header */}
+          <div style={{ textAlign: "center" }}>
+            <div style={{ color: NEON_DIM, fontFamily: "'Share Tech Mono',monospace", fontSize: 9, letterSpacing: "0.25em", marginBottom: 6 }}>
+              ■ GRUPOS // ACESSO RESTRITO
+            </div>
+            <div style={{ height: 1, background: "rgba(0,255,102,0.15)", width: 400, margin: "0 auto" }} />
+          </div>
+
+          {/* Grupos — grade de 3 colunas (2 linhas de 3) */}
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+              columnGap: 52,
+              rowGap: 40,
+              justifyItems: "center",
+            }}
+          >
+            {MODULES.map((mod) => (
+              <FileIcon key={mod.id} mod={mod} onClick={() => handleFileClick(mod.id)} />
+            ))}
+          </div>
+
+          {/* Footer hint */}
+          <div style={{ color: "rgba(0,255,102,0.12)", fontFamily: "'Share Tech Mono',monospace", fontSize: 8, letterSpacing: "0.2em" }}>
+            CLIQUE EM UM ARQUIVO PARA ACESSAR
+          </div>
         </div>
       </div>
 
