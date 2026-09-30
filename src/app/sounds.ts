@@ -11,6 +11,7 @@ export const SOUND_FILES = {
   heartbeat: "heartbeat.mp3",
   chat: "Chat.mp3", // nome do arquivo com "C" maiúsculo — GitHub Pages é case-sensitive
   hunterWest: "hunter-west.mp3", // easter egg do Scanner — som próprio, nada reaproveitado
+  p3Timeout: "p3-timeout.mp3", // fala do P3 quando o relógio do sistema foi mexido (countdown)
 } as const;
 
 export type SoundName = keyof typeof SOUND_FILES;
@@ -145,6 +146,7 @@ export const AMBIENT_CONFIG = {
 let bgMusic: HTMLAudioElement | null = null;
 let heartbeatLoop: HTMLAudioElement | null = null;
 let hunterWestSound: HTMLAudioElement | null = null;
+let p3TimeoutSound: HTMLAudioElement | null = null;
 
 export function startBackgroundMusic(volume = 0.18) {
   try {
@@ -191,6 +193,7 @@ export function stopAllAudio() {
   stopGlitchSound();
   stopHeartbeat();
   stopHunterWest();
+  stopP3Timeout();
 
   for (const audio of cache.values()) {
     try {
@@ -269,5 +272,35 @@ export function stopHunterWest() {
   if (hunterWestSound) {
     hunterWestSound.pause();
     hunterWestSound.currentTime = 0;
+  }
+}
+
+// ── P3 — RELÓGIO MANIPULADO ─────────────────────────────────────────────────
+// Fala do P3 na tela de bloqueio do countdown (`public/timer/`), quando alguém
+// mexe no relógio do sistema. Arquivo próprio: `public/sounds/p3-timeout.mp3`.
+// O countdown é uma página estática e não importa este módulo — ele tem uma
+// cópia local destas duas funções (mesmo arquivo, mesmo contrato) que ainda
+// liga o áudio a um AnalyserNode para a onda de voz reagir. Aqui fica o hook
+// para o site, se a fala precisar tocar fora do countdown.
+
+export function playP3Timeout(volume = 0.85) {
+  try {
+    if (!p3TimeoutSound) {
+      p3TimeoutSound = new Audio(soundUrl("p3Timeout"));
+    }
+    p3TimeoutSound.volume = volume;
+    p3TimeoutSound.currentTime = 0;
+    void p3TimeoutSound.play().catch(() => {
+      /* arquivo ainda não gravado ou autoplay bloqueado — segue mudo */
+    });
+  } catch {
+    /* ignore */
+  }
+}
+
+export function stopP3Timeout() {
+  if (p3TimeoutSound) {
+    p3TimeoutSound.pause();
+    p3TimeoutSound.currentTime = 0;
   }
 }

@@ -545,6 +545,133 @@
   body.desligado #screen,
   body.desligado #crt-line,
   body.desligado #crt-dot{ display:none; }
+
+  /* ---------- Tela do P3: relógio do sistema manipulado ----------
+     Fica por cima de TUDO (inclusive do painel de debug, z 100) e engole os
+     cliques: o countdown atrás não recebe nada enquanto ela estiver no ar. */
+  #p3-lock{
+    position:fixed; inset:0; z-index:200;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:28px;
+    padding:40px 24px;
+    background:#000;
+    color:var(--phosphor);
+    font-family:var(--font-ui);
+    overflow:hidden;
+  }
+  #p3-lock[hidden]{ display:none; }
+  #p3-lock .p3l-scan{
+    position:absolute; inset:0; pointer-events:none;
+    background:repeating-linear-gradient(to bottom,
+      rgba(0,0,0,0) 0px, rgba(0,0,0,0) 2px, rgba(0,0,0,0.35) 3px);
+  }
+  #p3-lock .p3l-vinheta{
+    position:absolute; inset:0; pointer-events:none;
+    background:radial-gradient(ellipse at center, rgba(0,0,0,0) 50%, rgba(0,0,0,0.7) 100%);
+  }
+  #p3-lock .p3l-head{
+    position:absolute; top:28px; left:40px; right:40px;
+    display:flex; justify-content:space-between; gap:16px;
+    font-size:12px; letter-spacing:1.5px;
+    color:var(--phosphor-dim);
+  }
+
+  /* glitch: duas cópias do texto (::before/::after) deslocadas e recortadas */
+  .p3l-glitch{ position:relative; display:inline-block; color:var(--err); }
+  .p3l-glitch::before,
+  .p3l-glitch::after{
+    content:attr(data-text);
+    position:absolute; left:0; top:0;
+    width:100%; overflow:hidden;
+    pointer-events:none;
+  }
+  .p3l-glitch::before{
+    color:var(--phosphor);
+    animation:p3l-glitch-a 2.6s infinite steps(1);
+  }
+  .p3l-glitch::after{
+    color:var(--amber);
+    animation:p3l-glitch-b 3.1s infinite steps(1);
+  }
+  @keyframes p3l-glitch-a{
+    0%,88%,100%{ transform:none; clip-path:inset(0 0 100% 0); }
+    89%{ transform:translate(-3px,0); clip-path:inset(10% 0 55% 0); }
+    92%{ transform:translate(2px,0);  clip-path:inset(60% 0 5% 0); }
+    95%{ transform:translate(-1px,0); clip-path:inset(35% 0 40% 0); }
+  }
+  @keyframes p3l-glitch-b{
+    0%,82%,100%{ transform:none; clip-path:inset(0 0 100% 0); }
+    83%{ transform:translate(3px,0);  clip-path:inset(50% 0 20% 0); }
+    87%{ transform:translate(-2px,0); clip-path:inset(5% 0 70% 0); }
+  }
+
+  #p3l-wave{
+    position:relative;
+    width:min(760px, 100%);
+    height:150px;
+    display:block;
+  }
+  #p3-lock .p3l-dialogo{
+    position:relative;
+    width:min(760px, 100%);
+    min-height:170px;
+    font-size:19px;
+    line-height:1.65;
+    letter-spacing:0.3px;
+  }
+  .p3l-linha{
+    min-height:1.65em;
+    white-space:pre-wrap;
+    color:#b8ffcb;
+    text-shadow:0 0 8px rgba(51,255,102,0.45);
+  }
+  .p3l-cursor{ animation:p3l-pisca 0.9s steps(1) infinite; }
+  @keyframes p3l-pisca{ 50%{ opacity:0; } }
+
+  #p3l-retry{
+    position:relative;
+    font-family:var(--font-display);
+    font-size:13px;
+    letter-spacing:0.18em;
+    color:var(--phosphor);
+    background:rgba(2,5,3,0.95);
+    border:1px solid rgba(51,255,102,0.28);
+    padding:8px 22px;
+    cursor:pointer;
+    opacity:0;
+    transition:opacity 0.6s ease, border-color 0.2s, box-shadow 0.2s;
+  }
+  #p3l-retry.visivel{ opacity:1; }
+  #p3l-retry:hover:not(:disabled),
+  #p3l-retry:focus-visible{
+    outline:none;
+    border-color:var(--phosphor);
+    box-shadow:0 0 18px rgba(51,255,102,0.28);
+  }
+  #p3l-retry:disabled{ cursor:wait; color:var(--phosphor-dim); }
+  #p3l-status{
+    position:relative;
+    min-height:1.4em;
+    font-size:12px; letter-spacing:1.5px;
+    color:var(--err);
+  }
+
+  /* sacudida curta quando a nova verificação também falha */
+  #p3-lock.tremendo .p3l-dialogo,
+  #p3-lock.tremendo #p3l-wave{ animation:p3l-treme 0.35s steps(2) 1; }
+  @keyframes p3l-treme{
+    0%{ transform:translate(0,0); }
+    25%{ transform:translate(-4px,1px); }
+    50%{ transform:translate(3px,-1px); }
+    75%{ transform:translate(-2px,0); }
+    100%{ transform:none; }
+  }
+
+  @media (max-width:600px){
+    #p3-lock .p3l-head{ left:16px; right:16px; flex-direction:column; gap:4px; }
+    #p3-lock .p3l-dialogo{ font-size:16px; }
+    #p3l-wave{ height:110px; }
+  }
 </style>
 </head>
 <body>
@@ -607,7 +734,46 @@
   <div id="crt-line"></div>
   <div id="crt-dot"></div>
 
+  <!-- Tela do P3 quando o relógio do sistema foi mexido. Montada aqui, fora
+       de #screen, pelo mesmo motivo da linha do desligamento: #screen fica
+       inert enquanto ela estiver no ar. -->
+  <div id="p3-lock" role="alertdialog" aria-modal="true" aria-labelledby="p3l-titulo" hidden>
+    <div class="p3l-head">
+      <span id="p3l-titulo" class="p3l-glitch" data-text="&gt;&gt; INCONSISTÊNCIA TEMPORAL DETECTADA">&gt;&gt; INCONSISTÊNCIA TEMPORAL DETECTADA</span>
+      <span>&gt;&gt; CANAL DE VOZ: P3</span>
+    </div>
+    <canvas id="p3l-wave" aria-hidden="true"></canvas>
+    <div class="p3l-dialogo" aria-live="polite">
+      <p id="p3l-fala" class="p3l-linha"></p>
+    </div>
+    <button id="p3l-retry" type="button" hidden>TENTAR NOVAMENTE</button>
+    <div id="p3l-status"></div>
+    <div class="p3l-scan"></div>
+    <div class="p3l-vinheta"></div>
+  </div>
+
 <script>
+/* ==========================================================================
+   RELÓGIO CONFIÁVEL
+   Nada nesta página pergunta "que horas são" ao Date.now(): o relógio do
+   sistema é de quem abriu a página, e quem quer espiar o que vem depois
+   adianta ele. agora() parte de uma âncora (horário do servidor, lido do
+   cabeçalho Date — ver verificaRelogio() lá embaixo) e anda com
+   performance.now(), que é monotônico e ignora mudança no relógio do sistema.
+   Até o servidor responder, a âncora é o relógio local — e o countdown ainda
+   não está ligado nesse intervalo.
+   ========================================================================== */
+const relogio = {
+  base: Date.now(),              // horário (ms epoch) no instante perf0
+  perf0: performance.now(),
+  sincronizado: false,           // a âncora já veio do servidor?
+  liberado: false,               // verificação feita e sem tela do P3 no ar
+};
+
+function agora(){
+  return relogio.base + (performance.now() - relogio.perf0);
+}
+
 /* ==========================================================================
    CONFIG — edite aqui
    ========================================================================== */
@@ -1086,7 +1252,7 @@ const FASE_FORCADA = (function(){
    subtração é entre dois instantes absolutos: dá o mesmo número em qualquer
    fuso em que a máquina do OBS esteja. */
 function diasRestantes(){
-  return (CONFIG.targetDate.getTime() - Date.now()) / 86400000;
+  return (CONFIG.targetDate.getTime() - agora()) / 86400000;
 }
 
 function faseAtual(){
@@ -1171,12 +1337,12 @@ const BOOT_TENTATIVAS_BASE = 40000;    // tentativas na âncora; sobe 1 por minu
 function milPt(n){ return Math.max(0, Math.round(n)).toLocaleString('pt-BR'); }
 
 function contagemFragmentos(){
-  const dias = Math.floor((Date.now() - BOOT_ANCORA.getTime()) / 86400000);
+  const dias = Math.floor((agora() - BOOT_ANCORA.getTime()) / 86400000);
   return Math.max(0, BOOT_FRAGMENTOS_BASE - 2 * Math.max(0, dias));
 }
 
 function numeroTentativas(){
-  const min = Math.floor((Date.now() - BOOT_ANCORA.getTime()) / 60000);
+  const min = Math.floor((agora() - BOOT_ANCORA.getTime()) / 60000);
   return BOOT_TENTATIVAS_BASE + Math.max(0, min);
 }
 
@@ -1269,7 +1435,7 @@ function pintaDigitos(){
 }
 
 function tickCountdown(){
-  const now = new Date();
+  const now = new Date(agora());
   el.clock.textContent = now.toTimeString().slice(0,8);
 
   const diff = CONFIG.targetDate - now;
@@ -1297,7 +1463,10 @@ function startCountdownClock(){
   countdownInterval = setInterval(tickCountdown, 1000);
   tickCountdown();
 }
-startCountdownClock();
+/* Não arranca aqui: quem liga o relógio é a verificação de horário
+   (ver RELÓGIO CONFIÁVEL lá embaixo), depois de saber que horas são de verdade.
+   Senão um relógio adiantado dispararia a sequência final antes de o servidor
+   responder. */
 
 /* ---------- Sub-status rotation (pequenas variações de texto no idle) ----------
    Mesmo esquema de fase do lore/math: `fase` é a MÍNIMA em que a frase entra.
@@ -1399,7 +1568,7 @@ function runGlitch(){
 
   if (glitchFrames) endGlitch();           // clique repetido: reinicia limpo
 
-  const fim = Date.now() + (CONFIG.glitchDuration || 320);
+  const fim = agora() + (CONFIG.glitchDuration || 320);
   el.digits.classList.add('glitching');
   el.digits.classList.toggle('corrompido', glitchMode !== 'digitos');
 
@@ -1407,7 +1576,7 @@ function runGlitch(){
     // Sair de idle encerra sempre, inclusive travado: o glitch não pode
     // competir com o dimming do evento. O fim da janela, esse sim, a trava
     // do debug ignora — é o que mantém os dígitos quebrados na tela.
-    if (state.current !== 'idle' || (!glitchTravado && Date.now() >= fim)){
+    if (state.current !== 'idle' || (!glitchTravado && agora() >= fim)){
       endGlitch();
       return;
     }
@@ -1447,7 +1616,7 @@ function pickWeightedEvent(){
 function runRandomEvent(){
   if (state.current !== 'idle') { scheduleNextEvent(); return; }
   // Perto do zero nada começa: um evento no ar disputaria a tela com o colapso.
-  if (CONFIG.targetDate.getTime() - Date.now() < (CONFIG.eventCutoffMs || 30000)){
+  if (CONFIG.targetDate.getTime() - agora() < (CONFIG.eventCutoffMs || 30000)){
     scheduleNextEvent();
     return;
   }
@@ -1701,11 +1870,11 @@ function showTransferEvent(){
   barra.style.width = '100%';
 
   // o cronômetro do número começa junto com a barra, pra os dois terminarem juntos
-  const inicio = Date.now();
+  const inicio = agora();
 
   requestAnimationFrame(() => panel.classList.add('visible'));
   let pctTimer = setInterval(() => {
-    const r = Math.min(1, (Date.now() - inicio) / janela);
+    const r = Math.min(1, (agora() - inicio) / janela);
     pct.textContent = r >= 1 ? '100% // COMPLETO' : Math.round(r * 100) + '%';
     if (r >= 1){ clearInterval(pctTimer); pctTimer = null; }
   }, 100);
@@ -1898,7 +2067,7 @@ const netState = {
 };
 
 function buildNetwork(){
-  netState.t0 = Date.now();
+  netState.t0 = agora();
 
   (CONFIG.netNodes || []).forEach((cfg, i) => {
     const c = document.createElementNS(SVG_NS, 'circle');
@@ -1962,8 +2131,8 @@ function buildNetwork(){
    é interpolado entre as posições VIVAS dos dois nós, no mesmo frame.
    ------------------------------------------------------------------- */
 function netFrame(){
-  const agora = Date.now();
-  const t = (agora - netState.t0) / 1000;
+  const tAgora = agora();
+  const t = (tAgora - netState.t0) / 1000;
   const A = CONFIG.netDriftAmplitude || 0;
 
   if (A > 0){
@@ -1987,7 +2156,7 @@ function netFrame(){
 
   for (let i = netState.pulsos.length - 1; i >= 0; i--){
     const p = netState.pulsos[i];
-    const r = (agora - p.inicio) / p.dur;
+    const r = (tAgora - p.inicio) / p.dur;
     if (r >= 1){ encerraPulso(p, i); continue; }
     p.circle.setAttribute('cx', p.de.x + (p.para.x - p.de.x) * r);
     p.circle.setAttribute('cy', p.de.y + (p.para.y - p.de.y) * r);
@@ -2055,7 +2224,7 @@ function runNodePulse(no){
 
   netState.pulsos.push({
     circle, aresta, de, para,
-    inicio: Date.now(),
+    inicio: agora(),
     dur: CONFIG.netPulseDuration || 1800,
   });
   ensureNetLoop();
@@ -2108,7 +2277,7 @@ function triggerEnding(){
   endingState.armed = true;
   setTimeout(() => {
     const janela = (CONFIG.ending || {}).replayWindowMs;
-    const atraso = Date.now() - CONFIG.targetDate.getTime();
+    const atraso = agora() - CONFIG.targetDate.getTime();
     if (typeof janela === 'number' && janela >= 0 && atraso > janela) skipToDeadScreen();
     else startEnding();
   }, 0);
@@ -2491,10 +2660,10 @@ function abortEnding(){
 
   // Porteiro: eventos de conteúdo só entram a partir do idle, igual ao fluxo real.
   function exigirIdle(nome){
-    var agora = Date.now();
-    if (agora < bloqueadoAte){
+    var tAgora = agora();
+    if (tAgora < bloqueadoAte){
       aviso('IGNORADO: ' + nome + ' — esperando o evento anterior encerrar ('
-        + Math.ceil((bloqueadoAte - agora) / 1000) + 's)', true);
+        + Math.ceil((bloqueadoAte - tAgora) / 1000) + 's)', true);
       return false;
     }
     if (state.current !== 'idle'){
@@ -2633,7 +2802,7 @@ function abortEnding(){
     // A janela só estende, nunca encurta: um segundo reset (já em idle,
     // espera=0) não pode apagar o bloqueio aberto pelo reset anterior — o
     // órfão daquele evento continua em voo.
-    if (espera) bloqueadoAte = Math.max(bloqueadoAte, Date.now() + espera);
+    if (espera) bloqueadoAte = Math.max(bloqueadoAte, agora() + espera);
 
     clearTimeout(state.eventTimer);
 
@@ -2664,8 +2833,8 @@ function abortEnding(){
       '\npulsos: ' + netState.pulsos.length + '/' + CONFIG.netMaxConcurrentPulses +
       '\nglitch: ' + glitchMode + (glitchTravado ? ' (travado)' : '')
       + (glitchFrames ? ' · em curso' : '') +
-      (Date.now() < bloqueadoAte
-        ? ' · travado: ' + Math.ceil((bloqueadoAte - Date.now()) / 1000) + 's' : '');
+      (agora() < bloqueadoAte
+        ? ' · travado: ' + Math.ceil((bloqueadoAte - agora()) / 1000) + 's' : '');
   }, 250);
 
   console.log('[P3] modo debug ativo (?debug=1)');
@@ -2709,7 +2878,7 @@ function marcaVisto(id){
    página aberta. */
 function avaliaMarcos(){
   const cfg = CONFIG.marcos || {};
-  const restante = CONFIG.targetDate.getTime() - Date.now();
+  const restante = CONFIG.targetDate.getTime() - agora();
 
   const cruzados = (cfg.lista || []).filter(m => restante <= m.antesMs);
   if (!cruzados.length) return;
@@ -2720,6 +2889,10 @@ function avaliaMarcos(){
 }
 
 function vigiaMarcos(){
+  // Sem horário verificado (ou com a tela do P3 no ar) nada é avaliado: um
+  // relógio adiantado marcaria como vistos marcos que ainda nem chegaram.
+  if (!relogio.liberado) return;
+
   // Da sequência final em diante nada daqui entra em cena.
   if (endingState.armed){
     marcoState.pendente = null;
@@ -2738,7 +2911,7 @@ function vigiaMarcos(){
     else marcoState.pendente = null;
 
     // O painel não pode estar no ar quando o countdown zerar.
-    const restante = CONFIG.targetDate.getTime() - Date.now();
+    const restante = CONFIG.targetDate.getTime() - agora();
     const folga = CONFIG.eventVisibleDuration + ((CONFIG.marcos || {}).margemColapsoMs || 3000);
     if (!forcado) marcaVisto(marco.id);
     if (restante > folga){
@@ -2762,6 +2935,8 @@ setInterval(vigiaMarcos, 1000);
      ?resetmarcos=1  apaga o registro de marcos já mostrados
      ?codigo=N    digita o trecho N (1 a 12, na ordem de codeEntries) no
                   primeiro idle depois do boot, ignorando fase e sacola
+     ?travar=1    abre a tela do P3 de relógio manipulado logo na carga
+                  (tratado lá embaixo, na VERIFICAÇÃO DE HORÁRIO)
    ========================================================================== */
 (function(){
   var params;
@@ -2806,6 +2981,429 @@ setInterval(vigiaMarcos, 1000);
   }
 })();
 
+/* ==========================================================================
+   VERIFICAÇÃO DE HORÁRIO + TELA DO P3
+   Na carga: pergunta a hora ao servidor (cabeçalho Date de um fetch da própria
+   página), ancora agora() nela e compara com o relógio local. Com a página
+   aberta: a cada poucos segundos compara quanto o Date.now() andou com quanto
+   o performance.now() andou — se divergirem, o relógio do sistema foi mexido
+   (pra frente OU pra trás). Qualquer das duas coisas põe a tela do P3 no ar,
+   que só sai com o relógio corrigido (botão TENTAR NOVAMENTE ou F5).
+
+   Sem rede na carga, não trava: segue com o relógio local e avisa no console.
+   Fora a âncora provisória do relógio (lá no topo), este é o único trecho
+   que ainda lê Date.now() — é justamente o relógio sob suspeita.
+   ========================================================================== */
+const VERIFICACAO = {
+  toleranciaServidorMs: 60000,  // relógio local x servidor (carga e "tentar de novo")
+  toleranciaSaltoMs: 5000,      // salto do relógio com a página aberta, em módulo
+  intervaloVigiaMs: 2000,
+  timeoutFetchMs: 5000,
+};
+
+/* Hora do servidor, ou null se não deu para perguntar. `perf` é o
+   performance.now() do instante a que `ms` se refere. */
+async function horaDoServidor(){
+  let controle = null, timer = null;
+  try {
+    if (typeof AbortController === 'function'){
+      controle = new AbortController();
+      timer = setTimeout(() => controle.abort(), VERIFICACAO.timeoutFetchMs);
+    }
+    const t0 = performance.now();
+    const resp = await fetch(location.href.split('#')[0], {
+      cache: 'no-store',
+      signal: controle ? controle.signal : undefined,
+    });
+    const t1 = performance.now();
+    // só o cabeçalho interessa: não baixa o resto da página
+    try { if (resp.body) resp.body.cancel(); } catch (e){}
+    const cab = resp.headers.get('Date');
+    const ms = cab ? Date.parse(cab) : NaN;
+    if (!Number.isFinite(ms)) throw new Error('resposta sem cabeçalho Date');
+    // O cabeçalho trunca no segundo (+500 centra), e o servidor carimbou a
+    // resposta mais ou menos no meio da ida e volta.
+    return { ms: ms + 500 + (t1 - t0) / 2, perf: t1 };
+  } catch (e){
+    console.warn('[P3] verificação de horário indisponível (' + ((e && e.message) || e) +
+      ') — seguindo com o relógio local.');
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function ancoraNoServidor(s){
+  relogio.base = s.ms;
+  relogio.perf0 = s.perf;
+  relogio.sincronizado = true;
+}
+
+/* true = relógio do sistema confiável. Com servidor, a referência é ele; sem,
+   é a âncora que já existe (na primeira carga, o próprio relógio local — que
+   então concorda consigo mesmo: é o fallback silencioso). */
+async function verificaRelogio(){
+  const s = await horaDoServidor();
+  if (s) ancoraNoServidor(s);
+  const desvio = agora() - Date.now();
+  if (s) console.log('[P3] horário verificado com o servidor · desvio do relógio local: ' +
+    (desvio / 1000).toFixed(1) + 's');
+  return Math.abs(desvio) <= VERIFICACAO.toleranciaServidorMs;
+}
+
+/* ---------- Vigia contínuo ---------- */
+const vigia = { data: Date.now(), perf: performance.now(), conferindo: false };
+
+function zeraVigia(){
+  vigia.data = Date.now();
+  vigia.perf = performance.now();
+}
+
+function vigiaRelogio(){
+  if (!relogio.liberado || vigia.conferindo){ zeraVigia(); return; }
+  const salto = (Date.now() - vigia.data) - (performance.now() - vigia.perf);
+  zeraVigia();
+  if (Math.abs(salto) <= VERIFICACAO.toleranciaSaltoMs) return;
+
+  console.warn('[P3] relógio do sistema saltou ' + (salto > 0 ? '+' : '') +
+    (salto / 1000).toFixed(1) + 's com a página aberta');
+  // Confere antes de acusar: o PC voltando de suspensão e a correção
+  // automática de horário também fazem o relógio pular. Se o servidor
+  // concorda com o relógio novo, foi isso — reancora sem alarde.
+  vigia.conferindo = true;
+  horaDoServidor().then(s => {
+    vigia.conferindo = false;
+    zeraVigia();
+    if (s && Math.abs(s.ms + (performance.now() - s.perf) - Date.now()) <= VERIFICACAO.toleranciaServidorMs){
+      ancoraNoServidor(s);
+      return;
+    }
+    bloqueia();
+  });
+}
+
+/* ---------- Áudio do P3 ----------
+   Mesmo contrato do playHunterWest()/stopHunterWest() de src/app/sounds.ts
+   (lá também existem playP3Timeout/stopP3Timeout para o site). Esta página é
+   estática e não importa módulos do site, por isso a cópia local. O arquivo é
+   public/sounds/p3-timeout.mp3; se não existir (ou o navegador barrar o
+   autoplay), playP3Timeout() resolve null e a onda cai no modo simulado.
+   Resolve com o AnalyserNode quando o som toca pela Web Audio. */
+const P3_AUDIO = {
+  src: new URL('../sounds/p3-timeout.mp3', location.href).href,
+  ctx: null,
+  el: null,
+  fonte: null,
+  analyser: null,
+};
+
+async function playP3Timeout(volume = 0.85){
+  stopP3Timeout();
+  const audio = new Audio(P3_AUDIO.src);
+  audio.preload = 'auto';
+  audio.volume = volume;
+  P3_AUDIO.el = audio;
+  try {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (AC){
+      try {
+        if (!P3_AUDIO.ctx) P3_AUDIO.ctx = new AC();
+        const ctx = P3_AUDIO.ctx;
+        // sem gesto do usuário o resume() pode ficar pendente para sempre
+        if (ctx.state !== 'running') await Promise.race([ctx.resume(), new Promise(r => setTimeout(r, 300))]);
+        // Só liga o elemento ao grafo com o contexto rodando: ligado a um
+        // contexto suspenso, o som tocaria mudo.
+        if (ctx.state === 'running' && P3_AUDIO.el === audio){
+          const analyser = ctx.createAnalyser();
+          analyser.fftSize = 256;
+          analyser.smoothingTimeConstant = 0.72;
+          const fonte = ctx.createMediaElementSource(audio);
+          fonte.connect(analyser);
+          analyser.connect(ctx.destination);
+          P3_AUDIO.fonte = fonte;
+          P3_AUDIO.analyser = analyser;
+        }
+      } catch (e){ /* sem Web Audio: toca mesmo assim, com a onda simulada */ }
+    }
+    await audio.play();
+    return P3_AUDIO.el === audio ? P3_AUDIO.analyser : null;
+  } catch (e){
+    // arquivo ausente ou autoplay bloqueado — a tela segue muda
+    if (P3_AUDIO.el === audio) stopP3Timeout();
+    return null;
+  }
+}
+
+function stopP3Timeout(){
+  const audio = P3_AUDIO.el;
+  if (audio){
+    try { audio.pause(); audio.currentTime = 0; } catch (e){}
+  }
+  try { if (P3_AUDIO.fonte) P3_AUDIO.fonte.disconnect(); } catch (e){}
+  try { if (P3_AUDIO.analyser) P3_AUDIO.analyser.disconnect(); } catch (e){}
+  P3_AUDIO.el = P3_AUDIO.fonte = P3_AUDIO.analyser = null;
+}
+
+/* ---------- Onda de voz ----------
+   Com analyser: barras = espectro real (graves no centro, espelhado).
+   Sem: fala procedural — sílabas em pico e vale puxadas por cada caractere
+   digitado, quase parada entre as duas falas. */
+const ONDA_BARRAS = 48;
+const onda = {
+  canvas: document.getElementById('p3l-wave'),
+  barras: new Float32Array(ONDA_BARRAS),
+  fase: Array.from({ length: ONDA_BARRAS }, () => Math.random() * Math.PI * 2),
+  vel: Array.from({ length: ONDA_BARRAS }, () => 5 + Math.random() * 9),
+  analyser: null,
+  dados: null,
+  falando: false,
+  energia: 0,
+  silaba: 0,
+  proxSilaba: 0,
+  raf: null,
+};
+
+// Chamado a cada caractere digitado: é o que dá ritmo de fala à simulação.
+function ondaFala(ch){
+  const t = performance.now();
+  if (/[.,;:!?…—]/.test(ch)) onda.silaba = 0.04;              // respiração
+  else if (ch === ' ') onda.silaba *= 0.35;                    // fim de palavra
+  else if (t >= onda.proxSilaba){
+    onda.silaba = 0.45 + Math.random() * 0.55;
+    onda.proxSilaba = t + 70 + Math.random() * 120;
+  }
+}
+
+function ondaQuadro(){
+  const cv = onda.canvas;
+  const dpr = window.devicePixelRatio || 1;
+  const w = cv.clientWidth, h = cv.clientHeight;
+  if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)){
+    cv.width = Math.round(w * dpr);
+    cv.height = Math.round(h * dpr);
+  }
+  const g = cv.getContext('2d');
+  g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  g.clearRect(0, 0, w, h);
+
+  const t = performance.now() / 1000;
+  const c = (ONDA_BARRAS - 1) / 2;
+  if (onda.analyser){
+    if (!onda.dados) onda.dados = new Uint8Array(onda.analyser.frequencyBinCount);
+    onda.analyser.getByteFrequencyData(onda.dados);
+  } else {
+    onda.energia += ((onda.falando ? 1 : 0.07) - onda.energia) * 0.08;
+    onda.silaba *= 0.94;
+  }
+
+  for (let i = 0; i < ONDA_BARRAS; i++){
+    const k = Math.abs(i - c) / c;               // 0 no centro, 1 nas pontas
+    const repouso = 0.025 + 0.015 * Math.sin(t * 2 + i * 0.35);
+    let alvo;
+    if (onda.analyser){
+      const v = onda.dados[1 + Math.floor(k * 44)] / 255;
+      alvo = Math.max(repouso, Math.pow(v, 1.3));
+    } else {
+      const envelope = 0.2 + 0.8 * Math.exp(-Math.pow(k * 1.6, 2));
+      const ruido = 0.6 * (0.5 + 0.5 * Math.sin(t * onda.vel[i] + onda.fase[i])) + 0.4 * Math.random();
+      const nivel = onda.energia * (0.2 + 0.8 * onda.silaba);
+      alvo = Math.max(repouso, nivel * envelope * ruido);
+    }
+    const b = onda.barras[i];
+    onda.barras[i] = b + (alvo - b) * (alvo > b ? 0.5 : 0.16);
+  }
+
+  g.fillStyle = 'rgba(51,255,102,0.14)';
+  g.fillRect(0, Math.round(h / 2), w, 1);
+
+  const passo = w / ONDA_BARRAS;
+  const larg = Math.max(2, passo * 0.55);
+  g.fillStyle = '#33ff66';
+  g.shadowColor = 'rgba(51,255,102,0.6)';
+  g.shadowBlur = 10;
+  for (let i = 0; i < ONDA_BARRAS; i++){
+    const alt = Math.max(2, Math.min(1, onda.barras[i]) * h * 0.92);
+    g.fillRect(i * passo + (passo - larg) / 2, (h - alt) / 2, larg, alt);
+  }
+  g.shadowBlur = 0;
+
+  onda.raf = requestAnimationFrame(ondaQuadro);
+}
+
+function ondaLiga(){
+  if (onda.raf === null) onda.raf = requestAnimationFrame(ondaQuadro);
+}
+
+function ondaDesliga(){
+  if (onda.raf !== null) cancelAnimationFrame(onda.raf);
+  onda.raf = null;
+  onda.analyser = null;
+  onda.dados = null;
+  onda.falando = false;
+  onda.energia = 0;
+  onda.silaba = 0;
+  onda.barras.fill(0);
+}
+
+/* ---------- Diálogo ----------
+   Uma fala só, amarrada ao p3-timeout.mp3 (16s): silêncio até 3,42s, voz até
+   14,78s, silêncio no fim. A digitação não tem velocidade fixa: cada caractere
+   tem um horário marcado dentro da janela da voz (pontuação "pesa" mais, como
+   pausa de respiração), e o último cai em 14,78s. O relógio de referência é o
+   próprio áudio quando ele toca; sem áudio, o tempo desde a abertura da tela —
+   os mesmos marcos nos dois modos. */
+const P3_FALA = {
+  texto: 'Curioso... você tentou mexer no tempo. Pra frente, pra trás, tanto faz — eu percebi. ' +
+         'Se eu fosse você... eu teria cuidado onde mexe.',
+  inicio: 3.42,     // s — primeira letra
+  fim: 14.78,       // s — última letra
+  respiro: 1.5,     // s de silêncio depois da fala antes do botão
+};
+
+function pesoDoChar(ch){
+  if (ch === '.' || ch === '?' || ch === '!') return 7;
+  if (ch === ',' || ch === '—') return 5;
+  if (ch === ' ') return 1.4;
+  return 1;
+}
+
+// Horário (s) de cada caractere: o peso de um caractere é a pausa DEPOIS dele.
+const P3_TEMPOS = (function(){
+  const t = P3_FALA.texto;
+  const acum = [0];
+  for (let i = 0; i < t.length - 1; i++) acum.push(acum[i] + pesoDoChar(t.charAt(i)));
+  const total = acum[acum.length - 1] || 1;
+  return acum.map(a => P3_FALA.inicio + (P3_FALA.fim - P3_FALA.inicio) * a / total);
+})();
+
+const p3 = {
+  tela: document.getElementById('p3-lock'),
+  fala: document.getElementById('p3l-fala'),
+  botao: document.getElementById('p3l-retry'),
+  status: document.getElementById('p3l-status'),
+  sessao: 0,        // muda a cada abertura/fechamento: laço antigo para sozinho
+  raf: null,
+  inicio: 0,        // performance.now() da abertura (relógio do modo sem áudio)
+  t: 0,             // último tempo lido — nunca anda pra trás
+  digitados: 0,
+  texto: null,      // nó de texto da fala
+};
+
+/* Segundos desde o início da fala. O áudio sai alguns ms depois da tela abrir:
+   quando ele entra, o relógio passa a ser o dele (sincronia real com a voz);
+   o Math.max em p3Quadro impede a troca de fazer o texto "desdigitar". */
+function p3Tempo(){
+  const a = P3_AUDIO.el;
+  if (a && !a.paused && a.currentTime > 0) return a.currentTime;
+  return (performance.now() - p3.inicio) / 1000;
+}
+
+function p3Quadro(sessao){
+  if (sessao !== p3.sessao) return;
+  const t = p3.t = Math.max(p3.t, p3Tempo());
+  const texto = P3_FALA.texto;
+
+  onda.falando = t >= P3_FALA.inicio && t < P3_FALA.fim;
+  let n = p3.digitados;
+  while (n < texto.length && P3_TEMPOS[n] <= t) ondaFala(texto.charAt(n++));
+  if (n !== p3.digitados){
+    p3.texto.data = texto.slice(0, n);
+    p3.digitados = n;
+  }
+
+  if (t >= P3_FALA.fim + P3_FALA.respiro){
+    p3.raf = null;
+    p3.botao.hidden = false;
+    requestAnimationFrame(() => p3.botao.classList.add('visivel'));
+    p3.botao.focus({ preventScroll: true });
+    return;
+  }
+  p3.raf = requestAnimationFrame(() => p3Quadro(sessao));
+}
+
+function p3Dialogo(sessao){
+  p3.inicio = performance.now();
+  p3.t = 0;
+  p3.digitados = 0;
+  p3.texto = document.createTextNode('');
+  const cursor = document.createElement('span');
+  cursor.className = 'p3l-cursor';
+  cursor.textContent = '█';
+  p3.fala.replaceChildren(p3.texto, cursor);
+
+  // toca do 0s; o silêncio inicial do arquivo é a espera antes da primeira letra
+  playP3Timeout().then(an => { if (sessao === p3.sessao) onda.analyser = an; });
+  p3.raf = requestAnimationFrame(() => p3Quadro(sessao));
+}
+
+/* ---------- Abrir / fechar ---------- */
+function bloqueia(){
+  relogio.liberado = false;
+  if (!p3.tela.hidden) return;
+  clearInterval(countdownInterval);          // nada anda atrás da tela
+
+  const sessao = ++p3.sessao;
+  cancelAnimationFrame(p3.raf);
+  p3.botao.hidden = true;
+  p3.botao.classList.remove('visivel');
+  p3.botao.disabled = false;
+  p3.botao.textContent = 'TENTAR NOVAMENTE';
+  p3.status.textContent = '';
+
+  document.getElementById('screen').inert = true;
+  p3.tela.hidden = false;
+  ondaLiga();
+  p3Dialogo(sessao);
+}
+
+function libera(){
+  if (!p3.tela.hidden){
+    p3.sessao++;
+    cancelAnimationFrame(p3.raf);
+    p3.raf = null;
+    stopP3Timeout();
+    ondaDesliga();
+    p3.tela.hidden = true;
+    document.getElementById('screen').inert = false;
+  }
+  relogio.liberado = true;
+  zeraVigia();
+  // depois do zero quem manda é a sequência final: não religa o relógio por cima
+  if (!endingState.armed) startCountdownClock();
+}
+
+p3.botao.addEventListener('click', async () => {
+  const sessao = p3.sessao;
+  p3.botao.disabled = true;
+  p3.botao.textContent = 'VERIFICANDO...';
+  p3.status.textContent = '';
+  const [ok] = await Promise.all([verificaRelogio(), new Promise(r => setTimeout(r, 700))]);
+  if (sessao !== p3.sessao) return;
+  if (ok){ libera(); return; }
+
+  p3.botao.disabled = false;
+  p3.botao.textContent = 'TENTAR NOVAMENTE';
+  p3.status.textContent = '>> relógio ainda fora de sincronia. ajuste data e hora do sistema.';
+  p3.tela.classList.remove('tremendo');
+  void p3.tela.offsetWidth;                 // reinicia a animação
+  p3.tela.classList.add('tremendo');
+});
+
+/* ---------- Partida ----------
+   ?travar=1 abre a tela do P3 depois da verificação, para testar sem mexer
+   no relógio. */
+verificaRelogio().then(ok => {
+  let forcar = false;
+  try { forcar = new URLSearchParams(location.search).get('travar') === '1'; } catch (e){}
+  if (ok && !forcar) libera();
+  else {
+    if (forcar) console.log('[P3] ?travar=1 — tela de relógio manipulado forçada');
+    bloqueia();
+  }
+  zeraVigia();
+  setInterval(vigiaRelogio, VERIFICACAO.intervaloVigiaMs);
+});
+
 window.P3Terminal = {
   // permite trocar o alvo do countdown em runtime, se precisar
   setTargetDate: (isoString) => { CONFIG.targetDate = new Date(isoString); },
@@ -2815,6 +3413,8 @@ window.P3Terminal = {
   // fase narrativa atual (1/2/3) e quanto falta, pra conferir no console
   faseAtual,
   diasRestantes,
+  // tela do P3 de relógio manipulado, sem precisar mexer no relógio
+  testarBloqueio: bloqueia,
 };
 </script>
 </body>
