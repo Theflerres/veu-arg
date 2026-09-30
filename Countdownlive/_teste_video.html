@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>teste de decode</title></head>
+<body style="background:#111;color:#0f6">
+<pre id="R">medindo...</pre>
+<script>
+var ARQS = ['cubo.webm', 'espiral.webm', 'flor_da_vida.webm', 'geometria_sagrada.webm', 'icosaedro.webm', 'merkaba.webm', 'octaedro.webm', 'tetraedro.webm', 'toro.webm'];
+var res = [];
+
+function testar(nome){
+  return new Promise(function(resolve){
+    var v = document.createElement('video');
+    v.muted = true; v.playsInline = true; v.preload = 'auto';
+    var fim = false;
+    function acabar(evento){
+      if (fim) return; fim = true;
+      var err = v.error;
+      res.push({
+        arq: nome, evento: evento,
+        readyState: v.readyState,
+        networkState: v.networkState,
+        duracao: isNaN(v.duration) ? null : Math.round(v.duration * 1000) / 1000,
+        largura: v.videoWidth, altura: v.videoHeight,
+        codigoErro: err ? err.code : null,
+        msgErro: err ? String(err.message) : null
+      });
+      v.removeAttribute('src'); v.load();
+      resolve();
+    }
+    v.addEventListener('canplay', function(){ acabar('canplay'); });
+    v.addEventListener('loadeddata', function(){ if (!fim) acabar('loadeddata'); });
+    v.addEventListener('error', function(){ acabar('error'); });
+    v.addEventListener('stalled', function(){ setTimeout(function(){ acabar('stalled'); }, 3000); });
+    setTimeout(function(){ acabar('timeout'); }, 6000);
+    v.src = 'assets/videos/' + nome;
+    v.load();
+  });
+}
+
+(async function(){
+  for (var i = 0; i < ARQS.length; i++) await testar(ARQS[i]);
+  // canPlayType tambem, pra registrar o suporte declarado
+  var probe = document.createElement('video');
+  var suporte = {
+    webm_vp9: probe.canPlayType('video/webm; codecs="vp9"'),
+    webm_vp9_alpha: probe.canPlayType('video/webm; codecs="vp09.00.10.08"'),
+    webm_generico: probe.canPlayType('video/webm')
+  };
+  document.getElementById('R').textContent =
+    JSON.stringify({ suporte: suporte, resultados: res });
+})();
+</script>
+<script src="/lento?ms=16000"></script>
+</body></html>

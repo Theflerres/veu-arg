@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { FAGULHAS, buildFileContent, type FagulhaData } from "./fagulhas-data";
 import { GRUPOS } from "./grupos-data";
 import {
@@ -10,14 +10,14 @@ import {
   startBackgroundMusic,
   stopBackgroundMusic,
   stopAllAudio,
-  startHeartbeat,
-  stopHeartbeat,
   playJingle,
   AMBIENT_CONFIG,
 } from "./sounds";
 import { useArgEngine } from "./arg-engine";
 import { ChatWidget } from "./components/ChatWidget";
-import { PlayerScanner } from "./components/PlayerScanner";
+import { GrupoArquivo } from "./components/GrupoArquivo";
+import { TimerEasterEgg, TimerOverlay } from "./components/TimerOverlay";
+import { ArquivoSecretoEasterEgg, ArquivoSecretoOverlay } from "./components/ArquivoSecreto";
 
 const NEON = "#00FF66";
 const NEON_MID = "#2BEA7B";
@@ -955,138 +955,6 @@ function PasswordScreen({ onSuccess, onTriesExhausted }: { onSuccess: () => void
   );
 }
 
-// ── GRUPO — TELA BLOQUEADA ─────────────────────────────────────────────────
-// Tela preta em cheia, sem áudio, com um campo de senha puramente decorativo
-// (desabilitado) e a frase do grupo em vermelho logo abaixo.
-
-const LOCK_RED = "#FF3333";
-
-function LockIcon({ size = 18 }: { size?: number }) {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="rgba(255,51,51,0.75)"
-      strokeWidth={1.8}
-      strokeLinecap="square"
-      aria-hidden="true"
-      style={{ flexShrink: 0, display: "block" }}
-    >
-      <rect x="4" y="10.5" width="16" height="10.5" />
-      <path d="M8 10.5V7a4 4 0 0 1 8 0v3.5" />
-      <path d="M12 14.5v3" />
-    </svg>
-  );
-}
-
-function GrupoLockScreen({
-  grupo,
-  onReturn,
-}: {
-  grupo: (typeof MODULES)[0];
-  onReturn: () => void;
-}) {
-  // Único som da tela: o batimento, em loop, do momento em que se entra até sair.
-  useEffect(() => {
-    startHeartbeat();
-    return () => stopHeartbeat();
-  }, []);
-
-  return (
-    <div
-      style={{
-        position: "fixed",
-        inset: 0,
-        background: "#000",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: 18,
-        // acima dos overlays de CRT e de qualquer widget: preto de verdade
-        zIndex: 600,
-        cursor: "default",
-      }}
-    >
-      {/* Campo de senha — decorativo, sempre bloqueado */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 12,
-          border: "1px solid rgba(255,51,51,0.35)",
-          background: "#000",
-          padding: "12px 18px",
-          minWidth: 340,
-        }}
-      >
-        <LockIcon />
-        <input
-          type="password"
-          value=""
-          readOnly
-          disabled
-          aria-label={`Senha — ${grupo.label} (bloqueado)`}
-          placeholder="••••••••"
-          onChange={() => {}}
-          style={{
-            flex: 1,
-            background: "transparent",
-            border: "none",
-            outline: "none",
-            color: "rgba(255,255,255,0.35)",
-            fontFamily: "'Share Tech Mono',monospace",
-            fontSize: 16,
-            letterSpacing: "0.2em",
-            cursor: "not-allowed",
-          }}
-        />
-      </div>
-
-      {/* Frase do grupo */}
-      <div
-        style={{
-          color: LOCK_RED,
-          fontFamily: "'Share Tech Mono',monospace",
-          fontSize: 13,
-          letterSpacing: "0.06em",
-          lineHeight: 1.6,
-          textAlign: "center",
-          maxWidth: 520,
-          padding: "0 20px",
-        }}
-      >
-        {grupo.phrase}
-      </div>
-
-      {/* Saída discreta */}
-      <button
-        onClick={onReturn}
-        style={{
-          position: "fixed",
-          bottom: 20,
-          left: 20,
-          fontFamily: "'Share Tech Mono',monospace",
-          fontSize: 10,
-          letterSpacing: "0.18em",
-          color: "rgba(255,255,255,0.22)",
-          background: "transparent",
-          border: "none",
-          padding: 6,
-          cursor: "pointer",
-          transition: "color 0.2s ease",
-        }}
-        onMouseEnter={(e) => { e.currentTarget.style.color = "rgba(255,255,255,0.6)"; }}
-        onMouseLeave={(e) => { e.currentTarget.style.color = "rgba(255,255,255,0.22)"; }}
-      >
-        &lt; VOLTAR
-      </button>
-    </div>
-  );
-}
-
 // ── MAIN TERMINAL ──────────────────────────────────────────────────────────
 
 function MainTerminal() {
@@ -1097,27 +965,32 @@ function MainTerminal() {
   // ── ARG EVENTS ────────────────────────────────────────────────────────
   const [showChat, setShowChat] = useState(false);
 
+  const [showTimer, setShowTimer] = useState(false);
+  const [showSecreto, setShowSecreto] = useState(false);
+
   const activeGrupo = MODULES.find((m) => m.id === activeGrupoId) ?? null;
   const inGrupo = activeGrupo !== null;
+  // Qualquer tela cheia por cima do terminal (Grupo, countdown ou arquivo secreto).
+  const inOverlay = inGrupo || showTimer || showSecreto;
 
   // Música ambiente em loop + jingle periódico "solto" por cima.
-  // Dentro da tela de um Grupo tudo fica em silêncio.
+  // Dentro de uma tela cheia (Grupo ou countdown) tudo fica em silêncio.
   useEffect(() => {
-    if (inGrupo) return;
+    if (inOverlay) return;
     startBackgroundMusic();
     const jingleIv = setInterval(() => playJingle(), AMBIENT_CONFIG.JINGLE_INTERVAL_MS);
     return () => {
       clearInterval(jingleIv);
       stopBackgroundMusic();
     };
-  }, [inGrupo]);
+  }, [inOverlay]);
 
-  useArgEngine(!inGrupo, {
+  useArgEngine(!inOverlay, {
     onChatEvent: () => setShowChat(true),
   });
 
   const handleFileClick = (id: number) => {
-    if (inGrupo) return;
+    if (inOverlay) return;
     // Sem som de click aqui: a tela do Grupo entra em silêncio total.
     stopAllAudio();
     setShowChat(false);
@@ -1128,6 +1001,30 @@ function MainTerminal() {
     setActiveGrupoId(null);
     playBack();
   };
+
+  const handleOpenTimer = () => {
+    if (inOverlay) return;
+    stopAllAudio();
+    setShowChat(false);
+    setShowTimer(true);
+  };
+
+  const handleCloseTimer = useCallback(() => {
+    setShowTimer(false);
+    playBack();
+  }, []);
+
+  const handleOpenSecreto = () => {
+    if (inOverlay) return;
+    stopAllAudio();
+    setShowChat(false);
+    setShowSecreto(true);
+  };
+
+  const handleCloseSecreto = useCallback(() => {
+    setShowSecreto(false);
+    playBack();
+  }, []);
 
   return (
     <div
@@ -1212,65 +1109,61 @@ function MainTerminal() {
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
-          // O Scanner ocupa espaço acima dos Grupos: em telas baixas o bloco
-          // rola em vez de ser cortado (margin auto no wrapper centraliza
-          // verticalmente sem estourar como `justify-content:center` faria).
-          overflowY: "auto",
+          justifyContent: "center",
+          gap: 32,
           zIndex: 10,
-          opacity: inGrupo ? 0.05 : 1,
+          opacity: inOverlay ? 0.05 : 1,
           transition: "opacity 0.45s ease",
-          pointerEvents: inGrupo ? "none" : "auto",
+          pointerEvents: inOverlay ? "none" : "auto",
         }}
       >
+        {/* Header */}
+        <div style={{ textAlign: "center" }}>
+          <div style={{ color: NEON_DIM, fontFamily: "'Share Tech Mono',monospace", fontSize: 9, letterSpacing: "0.25em", marginBottom: 6 }}>
+            ■ GRUPOS // ACESSO RESTRITO
+          </div>
+          <div style={{ height: 1, background: "rgba(0,255,102,0.15)", width: 400, margin: "0 auto" }} />
+        </div>
+
+        {/* Grupos — grade de 3 colunas (2 linhas de 3) */}
         <div
           style={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            gap: 28,
-            margin: "auto 0",
-            padding: "20px 0",
+            display: "grid",
+            gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+            columnGap: 52,
+            rowGap: 40,
+            justifyItems: "center",
           }}
         >
-          {/* Scanner de Players — varredura automática no topo */}
-          <PlayerScanner />
+          {MODULES.map((mod) => (
+            <FileIcon key={mod.id} mod={mod} onClick={() => handleFileClick(mod.id)} />
+          ))}
+        </div>
 
-          {/* Header */}
-          <div style={{ textAlign: "center" }}>
-            <div style={{ color: NEON_DIM, fontFamily: "'Share Tech Mono',monospace", fontSize: 9, letterSpacing: "0.25em", marginBottom: 6 }}>
-              ■ GRUPOS // ACESSO RESTRITO
-            </div>
-            <div style={{ height: 1, background: "rgba(0,255,102,0.15)", width: 400, margin: "0 auto" }} />
-          </div>
-
-          {/* Grupos — grade de 3 colunas (2 linhas de 3) */}
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-              columnGap: 52,
-              rowGap: 40,
-              justifyItems: "center",
-            }}
-          >
-            {MODULES.map((mod) => (
-              <FileIcon key={mod.id} mod={mod} onClick={() => handleFileClick(mod.id)} />
-            ))}
-          </div>
-
-          {/* Footer hint */}
-          <div style={{ color: "rgba(0,255,102,0.12)", fontFamily: "'Share Tech Mono',monospace", fontSize: 8, letterSpacing: "0.2em" }}>
-            CLIQUE EM UM ARQUIVO PARA ACESSAR
-          </div>
+        {/* Footer hint */}
+        <div style={{ color: "rgba(0,255,102,0.12)", fontFamily: "'Share Tech Mono',monospace", fontSize: 8, letterSpacing: "0.2em" }}>
+          CLIQUE EM UM ARQUIVO PARA ACESSAR
         </div>
       </div>
 
       {/* Evento A — chat flutuante */}
       {showChat && <ChatWidget onClose={() => setShowChat(false)} />}
 
-      {/* Tela do Grupo — preta, muda e com senha bloqueada */}
+      {/* Easter egg: relógio quase invisível no canto → countdown da live */}
+      {!inOverlay && <TimerEasterEgg bottom={BOT_BAR} onOpen={handleOpenTimer} />}
+
+      {/* Countdown da live em tela cheia */}
+      {showTimer && <TimerOverlay onClose={handleCloseTimer} />}
+
+      {/* Easter egg: ícone quase invisível no canto superior esquerdo → arquivo secreto */}
+      {!inOverlay && <ArquivoSecretoEasterEgg top={TOP_BAR} onOpen={handleOpenSecreto} />}
+
+      {/* Arquivo secreto (Hunter West + Austin) em tela cheia */}
+      {showSecreto && <ArquivoSecretoOverlay onClose={handleCloseSecreto} />}
+
+      {/* Arquivo do Grupo — senha auto-digitada e depois os membros */}
       {activeGrupo && (
-        <GrupoLockScreen grupo={activeGrupo} onReturn={handleReturn} />
+        <GrupoArquivo key={activeGrupo.id} grupo={activeGrupo} onReturn={handleReturn} />
       )}
 
       {/* Bottom bar */}

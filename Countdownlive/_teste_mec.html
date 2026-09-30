@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"></head>
+<body style="background:#111;color:#0f6">
+<pre id="R">medindo...</pre>
+<script>
+var log = [];
+function reg(teste, evento, det){ log.push({teste: teste, evento: evento, det: det || ''}); }
+
+// ---------- A: remover o src e chamar load() dispara error? ----------
+function testeA(){
+  return new Promise(function(resolve){
+    var v = document.createElement('video');
+    v.muted = true;
+    v.addEventListener('canplay', function(){
+      // simula o finish(): SEM remover os listeners, pra ver o que acontece
+      setTimeout(function(){
+        v.removeAttribute('src');
+        v.load();
+        setTimeout(function(){ resolve(); }, 800);
+      }, 100);
+    }, { once: true });
+    v.addEventListener('error', function(){
+      reg('A', 'error', 'code=' + (v.error && v.error.code) + ' msg=' + (v.error && v.error.message));
+    });
+    v.src = 'assets/videos/octaedro.webm';
+    v.load();
+    setTimeout(resolve, 6000);
+  });
+}
+
+// ---------- B: timer velho apaga o src do evento novo ----------
+function testeB(){
+  return new Promise(function(resolve){
+    var v = document.createElement('video');
+    v.muted = true;
+
+    // --- "evento 1": toca e encerra ---
+    var l1 = function(){ reg('B', 'evento1-canplay'); };
+    v.addEventListener('canplay', l1, { once: true });
+    v.src = 'assets/videos/cubo.webm';
+    v.load();
+
+    setTimeout(function(){
+      // finish() do evento 1: limpa listeners e agenda a liberacao do decoder
+      v.removeEventListener('canplay', l1);
+      v.pause();
+      setTimeout(function(){
+        reg('B', 'timer-velho-dispara', 'removeAttribute(src)+load()');
+        v.removeAttribute('src');
+        v.load();
+      }, 600);
+
+      // --- "evento 2" comeca 300ms depois, ANTES do timer velho ---
+      setTimeout(function(){
+        var onErr = function(){
+          reg('B', 'ERRO-NO-EVENTO-2',
+              'code=' + (v.error && v.error.code) + ' msg=' + (v.error && v.error.message));
+        };
+        var onCan = function(){ reg('B', 'evento2-canplay', 'src=' + v.currentSrc.split('/').pop()); };
+        v.addEventListener('error', onErr);
+        v.addEventListener('canplay', onCan, { once: true });
+        reg('B', 'evento2-inicia', 'src=octaedro.webm');
+        v.src = 'assets/videos/octaedro.webm';
+        v.load();
+      }, 300);
+    }, 1200);
+
+    setTimeout(resolve, 5000);
+  });
+}
+
+(async function(){
+  await testeA();
+  await testeB();
+  document.getElementById('R').textContent = JSON.stringify({ log: log });
+})();
+</script>
+<script src="/lento?ms=14000"></script>
+</body></html>
