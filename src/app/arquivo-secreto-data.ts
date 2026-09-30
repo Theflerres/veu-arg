@@ -35,12 +35,11 @@ export const PERFIS_SECRETOS: PerfilSecreto[] = [
     nome: "Hunter West",
     idade: "30 anos",
     dimensao: 'Espiralium "1"',
-    // Em Registros, a menção ao Austin fica censurada (████).
-    bio: `Hunter West chegou ao Véu com a primeira leva de convidados, inicialmente como professor de música. Já parecia ter proximidade com algumas pessoas que vieram junto — Fortunity era uma delas. Adaptou-se bem à dimensão e fez amizades ao longo de sua estadia.`,
-    notas: `Parecia sofrer de uma "doença" que funcionava quase como uma segunda personalidade dentro dele mesmo, autossabotando o indivíduo — nunca foi identificada, e por isso passou a ser chamada apenas de "Hunter 2". Ao longo do tempo, Hunter foi ficando conhecido entre os convidados, mas sua "doença" também avançou, até chegar a um estágio em que ele ficou cego. Graças à sua vivência numa dimensão onde a magia já existia, conseguiu contornar isso sem grandes problemas. Teve poucas interações diretas com Peluche; a presença de P3 no Véu, nessa época, ainda era limitada — nenhuma interação chegou a acontecer entre os dois. Hunter "morreu" pacificamente, longe de seus amigos — algo que lembra como gatos se afastam dos donos antes de morrer, para poupá-los da tristeza de ver a partida. Seu último contato foi com Fortunity, através da ligação interna que os unia: nenhuma palavra, apenas um aviso de que seu tempo havia chegado ao fim.`,
-    registros: `[REGISTRO PESSOAL — P3]
-
-Encontrei Hunter alguns minutos depois de sua "morte". Não cheguei antes porque Peluche ainda não tinha terminado meu contrato — mas isso não vem ao caso agora. Levei-o para a Torre de Memórias e o tratei. A "doença" dele, depois da morte, fez algo que ainda não sei explicar direito: foi como se ela simplesmente deixasse de existir — como se só tivesse matado o corpo para depois abandoná-lo. Depois do tratamento, ajustei as memórias dele. Ao "apagar" e "morrer", acordou de novo no teatro — agora reformado —, com a única explicação de que "o momento dele ainda não tinha chegado" e que ele ainda tinha uma história pra contar. Pra não deixá-lo completamente sozinho depois que todos os antigos convidados partiram, trouxe ████████████████. Hunter explicou a situação: onde estava, quem era. Hoje os dois trabalham juntos, numa área isolada do Véu, longe de qualquer tipo de distração.`,
+    // TODO: colar aqui os textos de Bio, Notas e Registros do Hunter West.
+    // Em Registros, a menção ao Austin deve ficar censurada (ex.: "████████").
+    bio: `[BIO DO HUNTER WEST]`,
+    notas: `[NOTAS DO HUNTER WEST]`,
+    registros: `[REGISTROS DO HUNTER WEST]`,
     foto: HUNTER_WEST_PHOTO,
   },
   {
