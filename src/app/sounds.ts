@@ -194,6 +194,7 @@ export function stopAllAudio() {
   stopHeartbeat();
   stopHunterWest();
   stopP3Timeout();
+  stopP3Sophia();
 
   for (const audio of cache.values()) {
     try {
@@ -303,4 +304,115 @@ export function stopP3Timeout() {
     p3TimeoutSound.pause();
     p3TimeoutSound.currentTime = 0;
   }
+}
+
+// ── P3 — RECONHECIMENTO ─────────────────────────────────────────────────────
+// Fala da tela escondida de `components/EcoScreen.tsx` (26,78s). O arquivo
+// público é CIFRADO e de nome neutro — quem baixa e decifra é a própria tela,
+// que entrega aqui só a URL local (blob:) do mp3 já decifrado.
+//
+// Mesmo contrato da cópia de playP3Timeout() que vive no countdown: resolve
+// com o AnalyserNode quando o som toca pela Web Audio (a onda reage à voz
+// real), ou null se não tocar (a onda cai no modo simulado).
+//
+// Duas etapas, por causa do Safari, que só libera áudio no mesmo tique do
+// gesto do usuário:
+//   abreP3Sophia()      DENTRO do clique, síncrona: cria o <audio> e liga o
+//                       AudioContext (que, criado nesse tique, já nasce
+//                       rodando). O load() ali "destrava" o elemento no iOS.
+//   playP3Sophia(src)   dá o play() — no mesmo tique, se o áudio já estiver
+//                       decifrado; ou assim que ficar pronto, com o elemento
+//                       já destravado pelo gesto.
+// Se o contexto não nascer rodando, o <audio> toca direto, fora do grafo —
+// com som e onda simulada, em vez de passar mudo por um contexto suspenso.
+//
+// Um <audio> novo a cada abertura: createMediaElementSource só aceita cada
+// elemento uma vez.
+
+const p3Sophia: {
+  ctx: AudioContext | null;
+  el: HTMLAudioElement | null;
+  fonte: MediaElementAudioSourceNode | null;
+  analyser: AnalyserNode | null;
+} = { ctx: null, el: null, fonte: null, analyser: null };
+
+export function abreP3Sophia(volume = 0.85) {
+  stopP3Sophia();
+  const audio = new Audio();
+  audio.preload = "auto";
+  audio.volume = volume;
+  p3Sophia.el = audio;
+  try {
+    audio.load();
+  } catch {
+    /* ignore */
+  }
+  try {
+    const AC =
+      window.AudioContext ??
+      (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (!AC) return;
+    p3Sophia.ctx ??= new AC();
+    const ctx = p3Sophia.ctx;
+    if (ctx.state !== "running") void ctx.resume().catch(() => {});
+    // Só liga o elemento ao grafo com o contexto rodando: ligado a um
+    // contexto suspenso, o som tocaria mudo.
+    if (ctx.state === "running") {
+      const analyser = ctx.createAnalyser();
+      analyser.fftSize = 256;
+      analyser.smoothingTimeConstant = 0.72;
+      const fonte = ctx.createMediaElementSource(audio);
+      fonte.connect(analyser);
+      analyser.connect(ctx.destination);
+      p3Sophia.fonte = fonte;
+      p3Sophia.analyser = analyser;
+    }
+  } catch {
+    /* sem Web Audio: toca mesmo assim, com a onda simulada */
+  }
+}
+
+export function playP3Sophia(src: string): Promise<AnalyserNode | null> {
+  const audio = p3Sophia.el;
+  if (!audio) return Promise.resolve(null); // fechada antes de o áudio ficar pronto
+  const falhou = () => {
+    // arquivo corrompido ou áudio bloqueado — a tela segue muda
+    if (p3Sophia.el === audio) stopP3Sophia();
+    return null;
+  };
+  try {
+    audio.src = src;
+    return audio.play().then(() => (p3Sophia.el === audio ? p3Sophia.analyser : null), falhou);
+  } catch {
+    return Promise.resolve(falhou());
+  }
+}
+
+/** Segundos de áudio já tocados, ou null se a fala não está tocando. */
+export function p3SophiaTempo(): number | null {
+  const a = p3Sophia.el;
+  return a && !a.paused && a.currentTime > 0 ? a.currentTime : null;
+}
+
+export function stopP3Sophia() {
+  const audio = p3Sophia.el;
+  if (audio) {
+    try {
+      audio.pause();
+      audio.currentTime = 0;
+    } catch {
+      /* ignore */
+    }
+  }
+  try {
+    p3Sophia.fonte?.disconnect();
+  } catch {
+    /* ignore */
+  }
+  try {
+    p3Sophia.analyser?.disconnect();
+  } catch {
+    /* ignore */
+  }
+  p3Sophia.el = p3Sophia.fonte = p3Sophia.analyser = null;
 }

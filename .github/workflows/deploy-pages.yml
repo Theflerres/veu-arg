@@ -30,8 +30,10 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build
-        run: npm run build
+      # build + scripts/check-debug-leaks.js: se algo de debug escapar pro
+      # dist/, o job falha aqui e o deploy não acontece.
+      - name: Build (com checagem de vazamento de debug)
+        run: npm run build:check
 
       - name: Setup Pages
         uses: actions/configure-pages@v5

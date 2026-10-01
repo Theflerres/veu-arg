@@ -18,6 +18,7 @@ import { ChatWidget } from "./components/ChatWidget";
 import { GrupoArquivo } from "./components/GrupoArquivo";
 import { TimerEasterEgg, TimerOverlay } from "./components/TimerOverlay";
 import { ArquivoSecretoEasterEgg, ArquivoSecretoOverlay } from "./components/ArquivoSecreto";
+import { EcoScreen, ecoPedido, limpaParamEco, temParamEco } from "./components/EcoScreen";
 
 const NEON = "#00FF66";
 const NEON_MID = "#2BEA7B";
@@ -695,6 +696,28 @@ function MeltOverlay({ onDone }: { onDone: () => void }) {
 
 // ── PASSWORD SCREEN ────────────────────────────────────────────────────────
 
+// SHA-256 (hex) das grafias aceitas — a senha em si não fica no código nem no
+// bundle. Para trocar: node -e "console.log(require('crypto').createHash('sha256').update('NOVA').digest('hex'))"
+const PASSWORD_HASHES = new Set([
+  "8f399ab8fe620674734b4bdf8fe4a22b5756428a5b9daf59be400d1424d07360", // minúsculas
+  "ffc6755a7c2697d871a5b28e69de10255f398d7712b9d110130542466bf7f56f", // MAIÚSCULAS
+]);
+
+async function sha256Hex(texto: string): Promise<string> {
+  const bytes = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(texto));
+  return Array.from(new Uint8Array(bytes), (b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+async function senhaCorreta(texto: string): Promise<boolean> {
+  try {
+    return PASSWORD_HASHES.has(await sha256Hex(texto));
+  } catch {
+    // crypto.subtle só existe em contexto seguro (https ou localhost); fora
+    // disso nenhuma senha passa, em vez de a tela quebrar
+    return false;
+  }
+}
+
 function PasswordScreen({ onSuccess, onTriesExhausted }: { onSuccess: () => void; onTriesExhausted: () => void }) {
   const [value, setValue] = useState("");
   const [attempts, setAttempts] = useState(0);
@@ -714,9 +737,17 @@ function PasswordScreen({ onSuccess, onTriesExhausted }: { onSuccess: () => void
     inputRef.current?.focus();
   }, []);
 
-  const handleSubmit = () => {
-    const v = value.trim();
-    if (v === "p3luche" || v === "P3LUCHE") {
+  // O hash é assíncrono: trava Enter/clique repetido enquanto confere, senão
+  // uma tentativa contaria duas vezes.
+  const checkingRef = useRef(false);
+
+  const handleSubmit = async () => {
+    if (checkingRef.current || phase === "success") return;
+    checkingRef.current = true;
+    const ok = await senhaCorreta(value.trim());
+    checkingRef.current = false;
+
+    if (ok) {
       setPhase("success");
       playSuccess();
       setTimeout(onSuccess, 900);
@@ -1201,6 +1232,36 @@ type Screen = "password" | "main" | "melting" | "closed";
 
 export default function App() {
   const [screen, setScreen] = useState<Screen>("password");
+
+  // Tela de reconhecimento (?eco=…). Com o parâmetro na URL, o site espera o
+  // hash ser conferido antes de montar qualquer coisa — senão a tela de senha
+  // piscaria por baixo e ficaria com o foco do teclado.
+  // `string` = aberto, com a chave que decifra as falas.
+  const [eco, setEco] = useState<"conferindo" | "fechado" | string>(() =>
+    temParamEco() ? "conferindo" : "fechado"
+  );
+  useEffect(() => {
+    if (eco !== "conferindo") return;
+    let vivo = true;
+    ecoPedido().then((chave) => {
+      if (vivo) setEco(chave ?? "fechado");
+    });
+    return () => {
+      vivo = false;
+    };
+  }, [eco]);
+  const fecharEco = useCallback(() => {
+    limpaParamEco();
+    setEco("fechado");
+  }, []);
+
+  if (eco !== "fechado") {
+    return (
+      <div style={{ width: "100vw", height: "100vh", overflow: "hidden", background: "#000" }}>
+        {eco !== "conferindo" && <EcoScreen chave={eco} onClose={fecharEco} />}
+      </div>
+    );
+  }
 
   return (
     <div style={{ width: "100vw", height: "100vh", overflow: "hidden", background: "#020503" }}>

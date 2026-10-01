@@ -3,13 +3,14 @@ import { useEffect, useState } from "react";
 // ============================================================================
 // COUNTDOWN DA LIVE (P3_KERNEL) — easter egg + overlay em tela cheia
 // ============================================================================
-// O countdown em si é uma página estática, `public/timer/index.html`, com os
-// assets em `public/timer/assets/`. Ele roda dentro de um <iframe> em vez de
-// virar componente React de propósito: são ~2.500 linhas de JS de DOM puro,
-// com ids globais, classes no <body> e dezenas de timers de módulo. No iframe
-// tudo isso fica isolado do site, e fechar o overlay destrói todos os timers
-// de uma vez. A mesma página segue acessível direto em `<base>/timer/` (e
-// aceita os parâmetros de teste dela: ?debug=1, ?fase=N, ?final=1 ...).
+// O countdown em si é uma página à parte, `timer/index.html` (segunda entrada
+// do Vite, ver vite.config.ts), com os assets em `public/timer/assets/`. Ele
+// roda dentro de um <iframe> em vez de virar componente React de propósito:
+// são ~2.500 linhas de JS de DOM puro, com ids globais, classes no <body> e
+// dezenas de timers de módulo. No iframe tudo isso fica isolado do site, e
+// fechar o overlay destrói todos os timers de uma vez. A mesma página segue
+// acessível direto em `<base>/timer/`; os parâmetros de teste dela só existem
+// em `npm run dev` (ver DEBUG-AUDIT.md).
 
 const TIMER_SRC = `${import.meta.env.BASE_URL}timer/index.html`;
 const NEON = "#00FF66";

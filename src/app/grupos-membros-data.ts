@@ -167,7 +167,7 @@ export function getMembrosDoGrupo(codename: string): Membro[] {
     const base = `${slugify(codename)}--${slugify(nome) || "anonimo"}`;
     let id = base;
     for (let n = 2; usados.has(id); n++) id = `${base}-${n}`;
-    if (id !== base) {
+    if (import.meta.env.DEV && id !== base) {
       console.warn(`[grupos] nome repetido em ${codename}: "${nome}" (id → ${id})`);
     }
     usados.add(id);

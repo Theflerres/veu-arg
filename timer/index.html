@@ -215,7 +215,7 @@
     100%{ transform:translateX(-1px); }
   }
 
-  /* Modo corrompido (painel de debug): os algarismos viram simbolo ou sosia
+  /* Modo corrompido (sequência final): os algarismos viram simbolo ou sosia
      torto, entao o efeito precisa dizer "isto nao e mais um numero". Ambar +
      separacao de canal mais agressiva. O shake e o cisalhamento vivem no MESMO
      keyframe de proposito: duas animacoes mexendo em transform se anulariam,
@@ -547,7 +547,7 @@
   body.desligado #crt-dot{ display:none; }
 
   /* ---------- Tela do P3: relógio do sistema manipulado ----------
-     Fica por cima de TUDO (inclusive do painel de debug, z 100) e engole os
+     Fica por cima de TUDO (z 200) e engole os
      cliques: o countdown atrás não recebe nada enquanto ela estiver no ar. */
   #p3-lock{
     position:fixed; inset:0; z-index:200;
@@ -677,8 +677,7 @@
 <body>
 
   <!-- Tudo que é imagem do terminal mora dentro de #screen: a última fase da
-       sequência final colapsa este contêiner inteiro num transform só. O painel
-       de debug fica de fora e sobrevive ao apagão. -->
+       sequência final colapsa este contêiner inteiro num transform só. -->
   <div id="screen">
     <div class="bg-grid"></div>
 
@@ -752,7 +751,7 @@
     <div class="p3l-vinheta"></div>
   </div>
 
-<script>
+<script type="module">
 /* ==========================================================================
    RELÓGIO CONFIÁVEL
    Nada nesta página pergunta "que horas são" ao Date.now(): o relógio do
@@ -1240,13 +1239,14 @@ console.log(data);
    ========================================================================== */
 
 /* Override de teste: ?fase=1|2|3 congela a fase, independente da data e sem
-   precisar de ?debug=1. Lido uma vez só, na carga. */
-const FASE_FORCADA = (function(){
+   precisar de ?debug=1. Lido uma vez só, na carga. Só em `npm run dev`: no
+   build, import.meta.env.DEV vira false e o parâmetro deixa de existir. */
+const FASE_FORCADA = import.meta.env.DEV ? (function(){
   try {
     const v = parseInt(new URLSearchParams(location.search).get('fase'), 10);
     return (v >= 1 && v <= 3) ? v : null;
   } catch (e){ return null; }
-})();
+})() : null;
 
 /* Dias que faltam para o alvo. targetDate carrega offset -03:00, então esta
    subtração é entre dois instantes absolutos: dá o mesmo número em qualquer
@@ -2591,9 +2591,10 @@ function abortEnding(){
 }
 
 /* ==========================================================================
-   PAINEL DE DEBUG — só existe com ?debug=1 na URL
-   Sem o parâmetro este bloco retorna na primeira linha e nada é criado:
-   nenhum elemento, nenhum estilo, nenhum timer. Zero pegada numa live real.
+   PAINEL DE DEBUG — só existe em `npm run dev`, e com ?debug=1 na URL
+   No build de produção import.meta.env.DEV é false e o Vite remove o bloco
+   inteiro do JS. Em dev, sem o parâmetro, ele retorna na primeira linha e
+   nada é criado: nenhum elemento, nenhum estilo, nenhum timer.
 
    Regra que todos os botões seguem: eles NÃO forçam por cima do estado atual.
    showContentEvent/showVideoEvent/showTransferEvent não checam state.current
@@ -2601,7 +2602,7 @@ function abortEnding(){
    qualquer uma delas durante outro evento quebraria a exclusão mútua e
    deixaria dois timers de evento em paralelo. Por isso a checagem vive aqui.
    ========================================================================== */
-(function(){
+if (import.meta.env.DEV) (function(){
   var params;
   try { params = new URLSearchParams(location.search); } catch (e){ return; }
   if (!params || params.get('debug') !== '1') return;
@@ -2925,8 +2926,9 @@ function vigiaMarcos(){
 setInterval(vigiaMarcos, 1000);
 
 /* ==========================================================================
-   ATALHOS DE TESTE POR QUERY STRING
-   Nenhum dos dois depende de ?debug=1, e nenhum deixa rastro sem o parâmetro.
+   ATALHOS DE TESTE POR QUERY STRING — só em `npm run dev`
+   Nenhum deles depende de ?debug=1, e nenhum deixa rastro sem o parâmetro.
+   No build de produção o bloco inteiro some (import.meta.env.DEV = false).
      ?fase=1|2|3  congela a fase narrativa (lido lá em cima, em FASE_FORCADA)
      ?final=1     dispara colapso + sequência final na hora, sem esperar o zero
                   e ignorando a janela de replay de 5 min
@@ -2938,7 +2940,7 @@ setInterval(vigiaMarcos, 1000);
      ?travar=1    abre a tela do P3 de relógio manipulado logo na carga
                   (tratado lá embaixo, na VERIFICAÇÃO DE HORÁRIO)
    ========================================================================== */
-(function(){
+if (import.meta.env.DEV) (function(){
   var params;
   try { params = new URLSearchParams(location.search); } catch (e){ return; }
   if (!params) return;
@@ -3391,31 +3393,35 @@ p3.botao.addEventListener('click', async () => {
 
 /* ---------- Partida ----------
    ?travar=1 abre a tela do P3 depois da verificação, para testar sem mexer
-   no relógio. */
+   no relógio. Só em `npm run dev`. */
 verificaRelogio().then(ok => {
   let forcar = false;
-  try { forcar = new URLSearchParams(location.search).get('travar') === '1'; } catch (e){}
-  if (ok && !forcar) libera();
-  else {
+  if (import.meta.env.DEV){
+    try { forcar = new URLSearchParams(location.search).get('travar') === '1'; } catch (e){}
     if (forcar) console.log('[P3] ?travar=1 — tela de relógio manipulado forçada');
-    bloqueia();
   }
+  if (ok && !forcar) libera();
+  else bloqueia();
   zeraVigia();
   setInterval(vigiaRelogio, VERIFICACAO.intervaloVigiaMs);
 });
 
-window.P3Terminal = {
-  // permite trocar o alvo do countdown em runtime, se precisar
-  setTargetDate: (isoString) => { CONFIG.targetDate = new Date(isoString); },
-  // sequência final: útil pra ensaiar o encerramento sem esperar o zero
-  runEnding: startEnding,
-  abortEnding,
-  // fase narrativa atual (1/2/3) e quanto falta, pra conferir no console
-  faseAtual,
-  diasRestantes,
-  // tela do P3 de relógio manipulado, sem precisar mexer no relógio
-  testarBloqueio: bloqueia,
-};
+// Atalhos de console — só em `npm run dev`; o build de produção não tem
+// window.P3Terminal.
+if (import.meta.env.DEV){
+  window.P3Terminal = {
+    // permite trocar o alvo do countdown em runtime, se precisar
+    setTargetDate: (isoString) => { CONFIG.targetDate = new Date(isoString); },
+    // sequência final: útil pra ensaiar o encerramento sem esperar o zero
+    runEnding: startEnding,
+    abortEnding,
+    // fase narrativa atual (1/2/3) e quanto falta, pra conferir no console
+    faseAtual,
+    diasRestantes,
+    // tela do P3 de relógio manipulado, sem precisar mexer no relógio
+    testarBloqueio: bloqueia,
+  };
+}
 </script>
 </body>
 </html>

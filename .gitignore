@@ -4,3 +4,6 @@ dist
 *.local
 Countdownlive/
 CIFRAS.md
+
+# Áudios originais (sem cifra) — nunca versionar: o repositório é público
+audio-original/

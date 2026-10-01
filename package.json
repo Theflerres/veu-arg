@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "build": "vite build",
+    "build:check": "npm run build && npm run check:leaks",
+    "check:leaks": "node scripts/check-debug-leaks.js",
     "build:pages": "cross-env GITHUB_PAGES=true vite build",
     "dev": "vite",
     "preview": "vite preview",

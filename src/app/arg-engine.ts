@@ -137,8 +137,10 @@ export function useArgEngine(active: boolean, handlers: ArgEventHandlers) {
     return () => clearInterval(cycle);
   }, [active]);
 
-  // Atalhos de debug — window.debugARG no DevTools Console
+  // Atalhos de debug — window.debugARG no DevTools Console. Só em `npm run dev`:
+  // no build de produção o corpo inteiro é removido.
   useEffect(() => {
+    if (!import.meta.env.DEV) return;
     window.debugARG = {
       triggerChat: () => handlersRef.current.onChatEvent(),
       resetTimer: () => resetArgTimer(),

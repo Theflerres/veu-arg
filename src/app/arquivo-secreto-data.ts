@@ -44,7 +44,7 @@ Encontrei Hunter alguns minutos depois de sua "morte". Não cheguei antes porque
     foto: HUNTER_WEST_PHOTO,
   },
   {
-    id: "austin",
+    id: "registro-02",
     nome: "████████████████",
     idade: "██ ████",
     dimensao: "██████████ ███",
