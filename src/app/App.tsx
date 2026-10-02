@@ -19,6 +19,13 @@ import { GrupoArquivo } from "./components/GrupoArquivo";
 import { TimerEasterEgg, TimerOverlay } from "./components/TimerOverlay";
 import { ArquivoSecretoEasterEgg, ArquivoSecretoOverlay } from "./components/ArquivoSecreto";
 import { EcoScreen, ecoPedido, limpaParamEco, temParamEco } from "./components/EcoScreen";
+import {
+  InterceptacaoOverlay,
+  fechaInterceptacao,
+  sinalizaNavegacao,
+  useInterceptacaoAberta,
+  useTravaInterceptacao,
+} from "./components/Interceptacao";
 
 const NEON = "#00FF66";
 const NEON_MID = "#2BEA7B";
@@ -988,7 +995,7 @@ function PasswordScreen({ onSuccess, onTriesExhausted }: { onSuccess: () => void
 
 // ── MAIN TERMINAL ──────────────────────────────────────────────────────────
 
-function MainTerminal() {
+function MainTerminal({ interceptando }: { interceptando: boolean }) {
   const [activeGrupoId, setActiveGrupoId] = useState<number | null>(null);
   const uptime = useUptime();
   const hexBar = useRollingHex(18);
@@ -1003,20 +1010,27 @@ function MainTerminal() {
   const inGrupo = activeGrupo !== null;
   // Qualquer tela cheia por cima do terminal (Grupo, countdown ou arquivo secreto).
   const inOverlay = inGrupo || showTimer || showSecreto;
+  // A Interceptação também cala o terminal, mas sem mexer nas telas acima.
+  const silencio = inOverlay || interceptando;
 
   // Música ambiente em loop + jingle periódico "solto" por cima.
   // Dentro de uma tela cheia (Grupo ou countdown) tudo fica em silêncio.
   useEffect(() => {
-    if (inOverlay) return;
+    if (silencio) return;
     startBackgroundMusic();
     const jingleIv = setInterval(() => playJingle(), AMBIENT_CONFIG.JINGLE_INTERVAL_MS);
     return () => {
       clearInterval(jingleIv);
       stopBackgroundMusic();
     };
-  }, [inOverlay]);
+  }, [silencio]);
 
-  useArgEngine(!inOverlay, {
+  // Cada troca de tela (inclusive a entrada no terminal) é uma chance da Interceptação.
+  useEffect(() => {
+    sinalizaNavegacao();
+  }, [activeGrupoId, showTimer, showSecreto]);
+
+  useArgEngine(!silencio, {
     onChatEvent: () => setShowChat(true),
   });
 
@@ -1232,6 +1246,7 @@ type Screen = "password" | "main" | "melting" | "closed";
 
 export default function App() {
   const [screen, setScreen] = useState<Screen>("password");
+  const interceptando = useInterceptacaoAberta();
 
   // Tela de reconhecimento (?eco=…). Com o parâmetro na URL, o site espera o
   // hash ser conferido antes de montar qualquer coisa — senão a tela de senha
@@ -1255,10 +1270,23 @@ export default function App() {
     setEco("fechado");
   }, []);
 
+  // Interceptação: nunca por cima da senha do terminal (nem do derretimento
+  // que vem depois dela). O terminal sinaliza as próprias navegações.
+  useTravaInterceptacao(eco === "fechado" && screen !== "main");
+  useEffect(() => {
+    if (eco !== "conferindo" && screen !== "main") sinalizaNavegacao();
+  }, [eco, screen]);
+  const fecharInterceptacao = useCallback(() => {
+    fechaInterceptacao();
+    playBack();
+  }, []);
+  const interceptacao = interceptando && <InterceptacaoOverlay onClose={fecharInterceptacao} />;
+
   if (eco !== "fechado") {
     return (
       <div style={{ width: "100vw", height: "100vh", overflow: "hidden", background: "#000" }}>
         {eco !== "conferindo" && <EcoScreen chave={eco} onClose={fecharEco} />}
+        {interceptacao}
       </div>
     );
   }
@@ -1289,7 +1317,7 @@ export default function App() {
         />
       )}
 
-      {screen === "main" && <MainTerminal />}
+      {screen === "main" && <MainTerminal interceptando={interceptando} />}
 
       {screen === "melting" && (
         <MeltOverlay onDone={() => setScreen("closed")} />
@@ -1308,6 +1336,8 @@ export default function App() {
           }}
         />
       )}
+
+      {interceptacao}
     </div>
   );
 }

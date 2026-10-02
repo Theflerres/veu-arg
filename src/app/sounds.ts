@@ -216,6 +216,59 @@ export function stopAllAudio() {
   looseSounds.clear();
 }
 
+// ── PAUSA E RETOMA ──────────────────────────────────────────────────────────
+// Para um overlay que entra por cima de qualquer tela (Interceptação): pausa
+// o que estiver tocando, sem zerar, e devolve a função que retoma de onde
+// parou. Só retoma o que ainda é o áudio vigente — o que foi parado/trocado
+// nesse meio-tempo (ex: a música ambiente reiniciada pelo terminal) fica.
+//
+// O countdown roda num iframe isolado (TimerOverlay.tsx), fora do alcance
+// daqui: ele recebe "pausarAudio"/"retomarAudio" por postMessage e cuida do
+// próprio som (listener em timer/index.html).
+
+function avisaIframes(tipo: "pausarAudio" | "retomarAudio") {
+  for (const frame of document.querySelectorAll("iframe")) {
+    try {
+      frame.contentWindow?.postMessage({ tipo }, window.location.origin);
+    } catch {
+      /* ignore */
+    }
+  }
+}
+
+export function pausaAudioDoSite(): () => void {
+  const vigentes = () =>
+    [
+      bgMusic,
+      heartbeatLoop,
+      hunterWestSound,
+      p3TimeoutSound,
+      glitchLoop,
+      p3Sophia.el,
+      ...cache.values(),
+      ...looseSounds,
+    ].filter((a): a is HTMLAudioElement => a !== null);
+
+  const pausados = vigentes().filter((a) => !a.paused && !a.ended);
+  for (const audio of pausados) {
+    try {
+      audio.pause();
+    } catch {
+      /* ignore */
+    }
+  }
+  avisaIframes("pausarAudio");
+
+  return () => {
+    avisaIframes("retomarAudio");
+    const ainda = new Set(vigentes());
+    for (const audio of pausados) {
+      if (!ainda.has(audio) || !audio.paused || audio.currentTime === 0) continue;
+      void audio.play().catch(() => {});
+    }
+  };
+}
+
 // ── HEARTBEAT ───────────────────────────────────────────────────────────────
 // Loop contínuo enquanto o usuário está dentro da tela de um Grupo.
 // Instância própria, fora do `cache`, para não ser derrubada pelo stopAllAudio()

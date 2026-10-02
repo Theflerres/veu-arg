@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useTravaInterceptacao } from "./Interceptacao";
 import type { GrupoData } from "../grupos-data";
 import {
   getMembrosDoGrupo,
@@ -46,6 +47,8 @@ export function GrupoArquivo({
   const [fase, setFase] = useState<Fase>("digitando");
   const [digitado, setDigitado] = useState("");
   const membros = useMemo(() => getMembrosDoGrupo(grupo.codename), [grupo.codename]);
+  // A Interceptação espera o campo de senha terminar.
+  useTravaInterceptacao(fase !== "conteudo");
 
   // Único som da tela: o batimento, em loop, do momento em que se entra até sair.
   useEffect(() => {

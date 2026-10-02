@@ -52,6 +52,7 @@ Os easter eggs do site (relógio no canto que abre o countdown, ícone que abre 
 |---|---|---|---|
 | `window.P3Terminal` | `setTargetDate(iso)` (muda o alvo do countdown), `runEnding()` (roda o final), `abortEnding()`, `faseAtual()`, `diasRestantes()`, `testarBloqueio()` | `timer/index.html` ~L3412 | ✅ só em dev |
 | `window.debugARG` | `triggerChat()` (força o chat P3LUCHE × Bott), `resetTimer()`, `getAccumulatedMinutes()` | `src/app/arg-engine.ts` ~L142 | ✅ só em dev |
+| `window.testeInterceptacao` | `abrir()` (abre a Interceptação Austin → Hunter na hora, sem contar disparo), `zerar()` (apaga contador e cooldown), `estado()` | `src/app/components/Interceptacao.tsx` | ✅ só em dev |
 
 Além disso, antes da mudança o script do countdown era um `<script>` clássico, então **todas** as funções e constantes dele (`CONFIG`, `startEnding`, `bloqueia`, `relogio`…) eram globais e alcançáveis pelo console. Agora o script é `type="module"`: nada vaza para `window` sem atribuição explícita.
 

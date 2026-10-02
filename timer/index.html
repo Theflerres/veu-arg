@@ -3146,6 +3146,38 @@ function stopP3Timeout(){
   P3_AUDIO.el = P3_AUDIO.fonte = P3_AUDIO.analyser = null;
 }
 
+/* ---------- Pausa vinda do site ----------
+   Esta página roda dentro de um iframe no site (TimerOverlay.tsx). Quando um
+   evento cai por cima dela (a Interceptação), o site manda por postMessage
+   {tipo:'pausarAudio'} e, ao fechar, {tipo:'retomarAudio'} — ver
+   pausaAudioDoSite() em src/app/sounds.ts. Pausa sem zerar (o currentTime
+   fica guardado no próprio elemento) e retoma do mesmo ponto. O relógio da
+   fala do P3 congela junto (p3Tempo), para o texto não correr na frente da voz.
+   Só aceita mensagem da janela-mãe, da mesma origem. */
+const pausaExterna = { em: 0, midias: [] };
+
+window.addEventListener('message', (e) => {
+  if (e.source !== window.parent || e.origin !== location.origin) return;
+  const tipo = e.data && e.data.tipo;
+  if (tipo === 'pausarAudio'){
+    if (pausaExterna.em) return;
+    pausaExterna.em = performance.now();
+    pausaExterna.midias = [P3_AUDIO.el, ...document.querySelectorAll('audio, video')]
+      .filter(m => m && !m.paused && !m.ended && !m.muted);
+    pausaExterna.midias.forEach(m => { try { m.pause(); } catch (err){} });
+  } else if (tipo === 'retomarAudio'){
+    if (!pausaExterna.em) return;
+    p3.inicio += performance.now() - pausaExterna.em; // relógio sem áudio também não anda
+    pausaExterna.em = 0;
+    for (const m of pausaExterna.midias){
+      // o que foi parado/trocado nesse meio-tempo continua parado
+      const vigente = m === P3_AUDIO.el || m.isConnected;
+      if (vigente && m.paused && m.currentTime > 0) m.play().catch(() => {});
+    }
+    pausaExterna.midias = [];
+  }
+});
+
 /* ---------- Onda de voz ----------
    Com analyser: barras = espectro real (graves no centro, espelhado).
    Sem: fala procedural — sílabas em pico e vale puxadas por cada caractere
@@ -3295,6 +3327,7 @@ const p3 = {
    quando ele entra, o relógio passa a ser o dele (sincronia real com a voz);
    o Math.max em p3Quadro impede a troca de fazer o texto "desdigitar". */
 function p3Tempo(){
+  if (pausaExterna.em) return p3.t; // site pausou o som: a fala congela junto
   const a = P3_AUDIO.el;
   if (a && !a.paused && a.currentTime > 0) return a.currentTime;
   return (performance.now() - p3.inicio) / 1000;

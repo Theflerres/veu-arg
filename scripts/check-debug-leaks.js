@@ -32,6 +32,7 @@ const PADROES = [
   { nome: "window.P3Terminal", re: /P3Terminal/ },
   { nome: "window.debugARG", re: /debugARG/ },
   { nome: "testarBloqueio()", re: /testarBloqueio/ },
+  { nome: "window.testeInterceptacao", re: /testeInterceptacao/ },
   // Parâmetros como aparecem em texto (logs, comentários): "?travar", "?final=1"...
   ...PARAMS.map((p) => ({ nome: `?${p}`, re: new RegExp(`\\?${p}\\b`) })),
   // ...e como aparecem depois de minificado: .get("travar"), .get('fase')
