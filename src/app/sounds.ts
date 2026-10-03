@@ -146,14 +146,14 @@ export async function playGlitchOnce() {
 // "we are getting better.mp3" assume em loop normal. O flag no localStorage é
 // gravado no instante da troca: dali em diante (e em qualquer visita futura)
 // a música nova entra direto, sem glitch nem contagem. A contagem só vive na
-// memória da aba — recarregar antes do 3º ciclo recomeça do zero.
+// memória da aba — recarregar antes do fim do ciclo recomeça do zero.
 
 export const AMBIENT_CONFIG = {
   JINGLE_INTERVAL_MS: 20 * 60 * 1000, // a cada 20 minutos
 };
 
 const MUSICA_FLAG = "veu-musica-transicionada";
-const MUSICA_CICLOS_ANTES_DA_TROCA = 3;
+const MUSICA_CICLOS_ANTES_DA_TROCA = 1;
 
 let bgMusic: HTMLAudioElement | null = null;
 let bgVolume = 0.18;
