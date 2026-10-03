@@ -781,7 +781,7 @@ const CONFIG = {
   // Offset -03:00 explícito: o alvo é um instante fixo em America/Sao_Paulo,
   // não "meia-noite no fuso de quem abriu a página". É dele que saem tanto o
   // countdown quanto a fase narrativa (ver faseAtual()).
-  targetDate: new Date('2026-10-09T00:00:00-03:00'),
+  targetDate: new Date('2026-10-16T00:00:00-03:00'),
 
   // Limites da fase narrativa, em DIAS restantes até o alvo.
   //   > 10 dias .......... fase 1
@@ -944,7 +944,7 @@ const CONFIG = {
       { t: 'montando /home/████ .................... OK' },
       { t: 'montando /home/████ .................... OK', d: 300 },
       { t: '2 usuários. 1 data em comum.', c: 'warn', d: 460 },
-      { t: '09/10 .................................. marcado nas duas agendas', c: 'warn', d: 380 },
+      { t: '16/10 .................................. marcado nas duas agendas', c: 'warn', d: 380 },
       { t: '' },
       { t: 'lendo modelo_de_mundo.bin .............. sem erro desta vez' },
       { t: 'os 13% ilegíveis agora estão legíveis.', c: 'err', d: 520 },
@@ -1122,7 +1122,7 @@ const CONFIG = {
     { fase: 3, tag: 'FOTO_0047.jpg',
       body: 'duas pessoas.\nmetadados intactos. rostos não.' },
     { fase: 3, tag: 'CALENDÁRIO',
-      body: '09/10 marcado nas duas agendas.\nnenhuma das duas sabe por quê.' },
+      body: '16/10 marcado nas duas agendas.\nnenhuma das duas sabe por quê.' },
     { fase: 3, tag: 'SESSÃO_A + SESSÃO_B',
       body: 'nunca estiveram online ao mesmo tempo.\nainda.' },
   ],
@@ -1211,7 +1211,7 @@ for (const s of sessoes) {
     { fase: 3, code:
 `const data = agendaA.intersect(agendaB);
 console.log(data);
-// "09/10"` },
+// "16/10"` },
     { fase: 3, code:
 `copiar("/home/████/fotos", "/memoria/fragmentos");
 // 47 de 312
