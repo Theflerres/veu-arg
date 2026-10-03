@@ -7,6 +7,7 @@ export const SOUND_FILES = {
   success: "success.mp3",
   glitch: "glitch.mp3",
   background: "background.mp3",
+  backgroundNova: "we are getting better.mp3", // substitui a "background" depois da transição (ver MÚSICA AMBIENTE)
   jingle: "jingle.mp3",
   heartbeat: "heartbeat.mp3",
   chat: "Chat.mp3", // nome do arquivo com "C" maiúsculo — GitHub Pages é case-sensitive
@@ -23,7 +24,7 @@ let glitchFallbackInterval: ReturnType<typeof setInterval> | null = null;
 const looseSounds = new Set<HTMLAudioElement>();
 
 function soundUrl(name: SoundName): string {
-  return `${BASE}sounds/${SOUND_FILES[name]}`;
+  return `${BASE}sounds/${encodeURIComponent(SOUND_FILES[name])}`;
 }
 
 function getAudio(name: SoundName): HTMLAudioElement {
@@ -138,21 +139,88 @@ export async function playGlitchOnce() {
 // ── MÚSICA AMBIENTE ─────────────────────────────────────────────────────────
 //  toca em loop contínuo; jingle.mp3 aparece periodicamente
 // "solto" por cima, sem parar nenhum áudio já tocando (instância própria).
+//
+// Transição permanente: a música antiga (background.mp3) toca
+// MUSICA_CICLOS_ANTES_DA_TROCA vezes inteiras — sem `loop` nativo, reiniciada
+// à mão no `ended` para contar —, depois glitch.mp3 uma vez e, ao fim dele,
+// "we are getting better.mp3" assume em loop normal. O flag no localStorage é
+// gravado no instante da troca: dali em diante (e em qualquer visita futura)
+// a música nova entra direto, sem glitch nem contagem. A contagem só vive na
+// memória da aba — recarregar antes do 3º ciclo recomeça do zero.
 
 export const AMBIENT_CONFIG = {
   JINGLE_INTERVAL_MS: 20 * 60 * 1000, // a cada 20 minutos
 };
 
+const MUSICA_FLAG = "veu-musica-transicionada";
+const MUSICA_CICLOS_ANTES_DA_TROCA = 3;
+
 let bgMusic: HTMLAudioElement | null = null;
+let bgVolume = 0.18;
+let bgCiclos = 0;
+// glitch.mp3 da transição — instância própria (não a do cache nem a glitchLoop).
+let transicaoGlitch: HTMLAudioElement | null = null;
 let heartbeatLoop: HTMLAudioElement | null = null;
 let hunterWestSound: HTMLAudioElement | null = null;
 let p3TimeoutSound: HTMLAudioElement | null = null;
 
+function musicaJaTransicionou(): boolean {
+  try {
+    return localStorage.getItem(MUSICA_FLAG) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function marcaMusicaTransicionada() {
+  try {
+    localStorage.setItem(MUSICA_FLAG, "1");
+  } catch {
+    /* sem storage — a troca vale só para esta aba */
+  }
+}
+
+function criaMusicaNova(): HTMLAudioElement {
+  const audio = new Audio(soundUrl("backgroundNova"));
+  audio.loop = true;
+  return audio;
+}
+
+function aoTerminarMusicaAntiga(this: HTMLAudioElement) {
+  if (bgMusic !== this) return;
+  bgCiclos += 1;
+  if (bgCiclos < MUSICA_CICLOS_ANTES_DA_TROCA) {
+    this.currentTime = 0;
+    void this.play().catch(() => {});
+    return;
+  }
+  this.removeEventListener("ended", aoTerminarMusicaAntiga);
+  marcaMusicaTransicionada();
+  bgMusic = criaMusicaNova();
+  bgMusic.volume = bgVolume;
+
+  const glitch = new Audio(soundUrl("glitch"));
+  glitch.volume = 0.5;
+  transicaoGlitch = glitch;
+  const entraMusicaNova = () => {
+    if (transicaoGlitch !== glitch) return; // cortado por stopBackgroundMusic()
+    transicaoGlitch = null;
+    void bgMusic?.play().catch(() => {});
+  };
+  glitch.addEventListener("ended", entraMusicaNova, { once: true });
+  void glitch.play().catch(entraMusicaNova); // sem glitch, entra direto
+}
+
 export function startBackgroundMusic(volume = 0.18) {
+  bgVolume = volume;
   try {
     if (!bgMusic) {
-      bgMusic = new Audio(soundUrl("background"));
-      bgMusic.loop = true;
+      if (musicaJaTransicionou()) {
+        bgMusic = criaMusicaNova();
+      } else {
+        bgMusic = new Audio(soundUrl("background"));
+        bgMusic.addEventListener("ended", aoTerminarMusicaAntiga);
+      }
     }
     bgMusic.volume = volume;
     void bgMusic.play().catch(() => {
@@ -164,6 +232,12 @@ export function startBackgroundMusic(volume = 0.18) {
 }
 
 export function stopBackgroundMusic() {
+  if (transicaoGlitch) {
+    // Saiu no meio do glitch da transição: a troca já valeu (flag gravado),
+    // a música nova só começa no próximo startBackgroundMusic().
+    transicaoGlitch.pause();
+    transicaoGlitch = null;
+  }
   if (bgMusic) {
     bgMusic.pause();
     bgMusic.currentTime = 0;
@@ -240,6 +314,7 @@ export function pausaAudioDoSite(): () => void {
   const vigentes = () =>
     [
       bgMusic,
+      transicaoGlitch,
       heartbeatLoop,
       hunterWestSound,
       p3TimeoutSound,
