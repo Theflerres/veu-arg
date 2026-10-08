@@ -1,14 +1,18 @@
 // ============================================================================
-// CHAT_DIALOGUES — diálogos do Evento A (P3LUCHE vs Bott)
+// CHAT_DIALOGUES — diálogos do chat do terminal (P3LUCHE vs Bott)
 // ============================================================================
-// Um item da lista é escolhido aleatoriamente a cada disparo do evento.
-// Substitua os textos PLACEHOLDER_* pelos seus diálogos reais.
+// A cada disparo do chat (agendador em arg-engine.ts) um diálogo é sorteado
+// entre estes e as variantes de deslize de bott-chat-data.ts (ver
+// components/ChatWidget.tsx). Estes podem repetir.
 // `delay` é o tempo (ms) de "digitação" simulada antes da mensagem aparecer.
+// `tipo` (opcional, padrão "normal"): "deslize" pinta a fala de âmbar, com
+// tremor; a fala seguinte chega rápida e a janela fecha com um flash verde.
 
 export interface ChatMessage {
   sender: "P3LUCHE" | "Bott" | string;
   text: string;
   delay: number;
+  tipo?: "normal" | "deslize";
 }
 
 export interface ChatDialogue {
@@ -21,13 +25,13 @@ export const CHAT_DIALOGUES: ChatDialogue[] = [
     id: "event_01",
     messages: [
       { sender: "P3LUCHE", text: "Bott como está indo os relatórios?", delay: 1500 },
-      { sender: "Bott", text: "Ja estão prontos estou enviando eles agora para o senhor! :D ", delay: 2500 },
+      { sender: "Bott", text: "Já estão prontos estou enviando eles agora para o senhor! :D ", delay: 2500 },
       { sender: "P3LUCHE", text: "Obrigado bott", delay: 2400 },
-      { sender: "Bott", text: "Alias uma pergunta. . . Notei que tivemos um registro de entrada no servidor vindo de um IP desconhecido. . . ", delay: 3000 },
-      { sender: "Bott", text: "O senhor Montou um nova Torre de memorias ?", delay: 3200 },
+      { sender: "Bott", text: "Aliás uma pergunta. . . Notei que tivemos um registro de entrada no servidor vindo de um IP desconhecido. . . ", delay: 3000 },
+      { sender: "Bott", text: "O senhor Montou uma nova Torre de memórias ?", delay: 3200 },
       { sender: "P3LUCHE", text: "Não. . .", delay: 2100 },
       { sender: "Bott", text: "Então isso é preocupante. . . ", delay: 2300 },
-      { sender: "P3LUCHE", text: "Eu vou pessoalmente ver oque é isso obrigado bott.", delay: 2300 },
+      { sender: "P3LUCHE", text: "Eu vou pessoalmente ver o que é isso obrigado bott.", delay: 2300 },
     ],
   },
   {

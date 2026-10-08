@@ -403,7 +403,7 @@ export function PlayerScanner() {
             border: `1px solid ${isHunter ? "rgba(255,43,54,0.4)" : "rgba(0,255,102,0.3)"}`,
           }}
         >
-          {/* Camada principal + as duas cópias do split RGB (durante o glitch —
+          {/* Camada principal + as duas camadas duplicadas do split RGB (durante o glitch —
               e o ciclo inteiro, no caso do Hunter West) */}
           {(
             [

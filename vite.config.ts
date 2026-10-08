@@ -18,6 +18,8 @@ export default defineConfig({
       input: {
         main: resolve(__dirname, "index.html"),
         timer: resolve(__dirname, "timer/index.html"),
+        // Hub da Bott: página React própria (src/bott/), em <base>/bott/.
+        bott: resolve(__dirname, "bott/index.html"),
       },
     },
   },

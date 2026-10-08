@@ -14,7 +14,7 @@ import {
   AMBIENT_CONFIG,
 } from "./sounds";
 import { useArgEngine } from "./arg-engine";
-import { ChatWidget } from "./components/ChatWidget";
+import { ChatWidget, abreChatSorteado, fechaChat, useChatAberto } from "./components/ChatWidget";
 import { GrupoArquivo } from "./components/GrupoArquivo";
 import { TimerEasterEgg, TimerOverlay } from "./components/TimerOverlay";
 import { ArquivoSecretoEasterEgg, ArquivoSecretoOverlay } from "./components/ArquivoSecreto";
@@ -26,6 +26,8 @@ import {
   useInterceptacaoAberta,
   useTravaInterceptacao,
 } from "./components/Interceptacao";
+import { AbelhaRara, sinalizaAbelha } from "./components/AbelhaRara";
+import { marcaGatilhoNivel3 } from "./bott-progresso";
 
 const NEON = "#00FF66";
 const NEON_MID = "#2BEA7B";
@@ -1001,7 +1003,8 @@ function MainTerminal({ interceptando }: { interceptando: boolean }) {
   const hexBar = useRollingHex(18);
 
   // ── ARG EVENTS ────────────────────────────────────────────────────────
-  const [showChat, setShowChat] = useState(false);
+  // Chat do terminal: estado global em components/ChatWidget.tsx.
+  const chat = useChatAberto();
 
   const [showTimer, setShowTimer] = useState(false);
   const [showSecreto, setShowSecreto] = useState(false);
@@ -1025,20 +1028,30 @@ function MainTerminal({ interceptando }: { interceptando: boolean }) {
     };
   }, [silencio]);
 
-  // Cada troca de tela (inclusive a entrada no terminal) é uma chance da Interceptação.
+  // Cada troca de tela (inclusive a entrada no terminal) é uma chance da
+  // Interceptação e, depois dela, da abelha (que nunca voa com a Interceptação
+  // sorteada/aberta nem com o chat na tela).
   useEffect(() => {
     sinalizaNavegacao();
+    sinalizaAbelha();
   }, [activeGrupoId, showTimer, showSecreto]);
 
+  // A Interceptação, ao abrir, fecha o chat. Sair do terminal também.
+  useEffect(() => {
+    if (interceptando) fechaChat();
+  }, [interceptando]);
+  useEffect(() => fechaChat, []);
+
+  // Chat: só com o motor ligado (sem tela cheia nem Interceptação por cima).
   useArgEngine(!silencio, {
-    onChatEvent: () => setShowChat(true),
+    onChatEvent: abreChatSorteado,
   });
 
   const handleFileClick = (id: number) => {
     if (inOverlay) return;
     // Sem som de click aqui: a tela do Grupo entra em silêncio total.
     stopAllAudio();
-    setShowChat(false);
+    fechaChat();
     setActiveGrupoId(id);
   };
 
@@ -1050,7 +1063,7 @@ function MainTerminal({ interceptando }: { interceptando: boolean }) {
   const handleOpenTimer = () => {
     if (inOverlay) return;
     stopAllAudio();
-    setShowChat(false);
+    fechaChat();
     setShowTimer(true);
   };
 
@@ -1062,7 +1075,7 @@ function MainTerminal({ interceptando }: { interceptando: boolean }) {
   const handleOpenSecreto = () => {
     if (inOverlay) return;
     stopAllAudio();
-    setShowChat(false);
+    fechaChat();
     setShowSecreto(true);
   };
 
@@ -1191,8 +1204,15 @@ function MainTerminal({ interceptando }: { interceptando: boolean }) {
         </div>
       </div>
 
-      {/* Evento A — chat flutuante */}
-      {showChat && <ChatWidget onClose={() => setShowChat(false)} />}
+      {/* Chat do terminal (P3LUCHE vs Bott) */}
+      {chat && (
+        <ChatWidget
+          key={chat.n}
+          dialogo={chat.dialogo}
+          onClose={fechaChat}
+          onCompleto={chat.deslizeId ? marcaGatilhoNivel3 : undefined}
+        />
+      )}
 
       {/* Easter egg: relógio quase invisível no canto → countdown da live */}
       {!inOverlay && <TimerEasterEgg bottom={BOT_BAR} onOpen={handleOpenTimer} />}
@@ -1205,6 +1225,10 @@ function MainTerminal({ interceptando }: { interceptando: boolean }) {
 
       {/* Arquivo secreto (Hunter West + Austin) em tela cheia */}
       {showSecreto && <ArquivoSecretoOverlay onClose={handleCloseSecreto} />}
+
+      {/* Evento raro: abelha cruzando a tela → hub */}
+      <AbelhaRara />
+
 
       {/* Arquivo do Grupo — senha auto-digitada e depois os membros */}
       {activeGrupo && (

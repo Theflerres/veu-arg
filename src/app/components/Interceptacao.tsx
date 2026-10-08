@@ -150,6 +150,14 @@ export function useInterceptacaoAberta(): boolean {
   );
 }
 
+/**
+ * Para outros eventos raros (abelha da Bott) não se sobreporem a este:
+ * `ocupada` = aberta ou sorteada esperando; `travada` = alguma tela pedindo senha.
+ */
+export function estadoInterceptacao(): { ocupada: boolean; travada: boolean } {
+  return { ocupada: aberta || pendente, travada: travas > 0 };
+}
+
 export function fechaInterceptacao() {
   if (!aberta) return;
   aberta = false;

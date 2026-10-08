@@ -33,6 +33,17 @@ const PADROES = [
   { nome: "window.debugARG", re: /debugARG/ },
   { nome: "testarBloqueio()", re: /testarBloqueio/ },
   { nome: "window.testeInterceptacao", re: /testeInterceptacao/ },
+  // Hub da Bott (src/app/bott-teste.ts): atalhos e chaves de teste.
+  // window.testeBott inclui abrirHub, abelha, chat(n), nivel, estado, zerar.
+  { nome: "window.testeBott", re: /testeBott/ },
+  { nome: "aviso de testeBott.chat", re: /o chat só abre no site principal/ },
+  { nome: "aviso de testeBott.chat (abelha)", re: /a abelha está na vez/ },
+  { nome: "chave veu-bott-estado-teste", re: /estado-teste/ },
+  { nome: "chave veu-bott-forca-nivel", re: /forca-nivel/ },
+  { nome: "marcador [TEXTO A ENVIAR]", re: /TEXTO A ENVIAR/ },
+  // Termos que não podem ir ao ar de jeito nenhum (o Ç pode sair escapado no JS)
+  { nome: "Dott", re: /Dott/ },
+  { nome: "TRAÇA", re: /TRA(?:Ç|\\u00c7|\\xc7|&#199;|&Ccedil;)A/i },
   // Parâmetros como aparecem em texto (logs, comentários): "?travar", "?final=1"...
   ...PARAMS.map((p) => ({ nome: `?${p}`, re: new RegExp(`\\?${p}\\b`) })),
   // ...e como aparecem depois de minificado: .get("travar"), .get('fase')
@@ -43,6 +54,30 @@ const PADROES = [
   // Source map anularia a minificação (ver build.sourcemap no vite.config.ts)
   { nome: "sourceMappingURL", re: /sourceMappingURL=/ },
 ];
+
+// Termos que não podem existir em lugar nenhum do repositório — nem aqui,
+// que também é público. Os padrões ficam em base64 e são procurados no texto
+// do build normalizado (ver normaliza): sem acentos, sem escapes \uXXXX,
+// \xXX e &#NNN;, tudo em maiúsculas. Assim uma variação com ou sem acento,
+// ou escapada pelo minificador, também é pega.
+const OCULTOS = [
+  "U1VCU1RJVFVUQQ==",
+  "XGJDT1BJQVM/XGI=",
+  "XGJWRVJTQU8gQlxi",
+].map((b64, i) => ({
+  nome: `termo oculto #${i + 1}`,
+  re: new RegExp(Buffer.from(b64, "base64").toString("utf8"), "g"),
+}));
+
+function normaliza(texto) {
+  return texto
+    .replace(/\\u([0-9a-fA-F]{4})/g, (_, h) => String.fromCharCode(parseInt(h, 16)))
+    .replace(/\\x([0-9a-fA-F]{2})/g, (_, h) => String.fromCharCode(parseInt(h, 16)))
+    .replace(/&#(\d+);/g, (_, d) => String.fromCharCode(Number(d)))
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toUpperCase();
+}
 
 const EXTENSOES = new Set([".js", ".mjs", ".cjs", ".html", ".css"]);
 
@@ -81,6 +116,12 @@ for (const arq of todos) {
     const global = new RegExp(re.source, re.flags.includes("g") ? re.flags : re.flags + "g");
     for (const m of texto.matchAll(global)) {
       vazamentos.push({ padrao: nome, arquivo: rel, contexto: trecho(texto, m.index, m[0].length) });
+    }
+  }
+  const normalizado = normaliza(texto);
+  for (const { nome, re } of OCULTOS) {
+    for (const m of normalizado.matchAll(re)) {
+      vazamentos.push({ padrao: nome, arquivo: rel, contexto: trecho(normalizado, m.index, m[0].length) });
     }
   }
 }

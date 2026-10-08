@@ -34,7 +34,7 @@ Todos ficam no countdown (`timer/index.html`, antes `public/timer/index.html`). 
 | `?codigo=1..12` | Digita o trecho de código N, inclusive os da fase 3 | ~L2972 | ✅ só em dev |
 | `?travar=1` | Força a tela do P3 de "relógio manipulado" | ~L3400 | ✅ só em dev |
 | `?eco=<chave>` | **Recurso de produção, não é debug.** Abre a tela de reconhecimento pessoal (`src/app/components/EcoScreen.tsx`). O código guarda só o SHA-256 da chave. Os textos e o áudio estão cifrados com a chave (XOR). O áudio publicado é `public/sounds/eco-02.bin`. O mp3 original fica em `audio-original/`, que está no `.gitignore` | `src/app/App.tsx` (root) | Intencional, fica em produção |
-| `?egg=` | **Não existe na versão atual.** Só aparece em `Countdownlive/p3-terminal-countdown.html` (cópia antiga, fora do build, mas versionada no git; ver seção 7) | — | n/a |
+| `?egg=` | **Não existe na versão atual.** Só aparece em `Countdownlive/p3-terminal-countdown.html` (versão antiga, fora do build, mas versionada no git; ver seção 7) | — | n/a |
 
 Antes da mudança, **todos funcionavam em produção**: `https://theflerres.github.io/veu-arg/timer/?final=1` mostrava o final da live para qualquer um.
 
@@ -51,10 +51,20 @@ Os easter eggs do site (relógio no canto que abre o countdown, ícone que abre 
 | Objeto | Funções | Onde | Status |
 |---|---|---|---|
 | `window.P3Terminal` | `setTargetDate(iso)` (muda o alvo do countdown), `runEnding()` (roda o final), `abortEnding()`, `faseAtual()`, `diasRestantes()`, `testarBloqueio()` | `timer/index.html` ~L3412 | ✅ só em dev |
-| `window.debugARG` | `triggerChat()` (força o chat P3LUCHE × Bott), `resetTimer()`, `getAccumulatedMinutes()` | `src/app/arg-engine.ts` ~L142 | ✅ só em dev |
+| `window.debugARG` | `triggerChat()` (força o chat do terminal agora: sorteia como o agendador, inclusive as variantes de deslize que o visitante já pode ver), `resetTimer()`, `getAccumulatedMinutes()` | `src/app/arg-engine.ts` ~L142 | ✅ só em dev |
 | `window.testeInterceptacao` | `abrir()` (abre a Interceptação Austin → Hunter na hora, sem contar disparo), `zerar()` (apaga contador e cooldown), `estado()` | `src/app/components/Interceptacao.tsx` | ✅ só em dev |
+| `window.testeBott` | `abrirHub()` (abre o hub), `abelha()` (solta a abelha rara na hora, sem contar aparição — só no terminal, depois da senha), `chat(n)` (abre a variante de deslize n de `src/app/bott-chat-data.ts` no chat do terminal, `ChatWidget`, ignorando data, contador e "uma vez por visitante" — só no terminal, depois da senha; variante sem texto mostra `[TEXTO A ENVIAR]`), `nivel(n)` (abre o hub disparando o degrau n na hora, ignorando data e gatilho; 4 = camada final; 0 zera), `estado(e)` (sobrepõe `ESTADO_MUNDO`: `"desconhecido"`, `"nao-contaram"`, `"contaram"`), `zerar()` (apaga todas as chaves `veu-bott-*`) | `src/app/bott-teste.ts` (registrado em `src/bott/main.tsx`, `src/app/components/AbelhaRara.tsx` e `src/app/components/ChatWidget.tsx`) | ✅ só em dev |
 
 Além disso, antes da mudança o script do countdown era um `<script>` clássico, então **todas** as funções e constantes dele (`CONFIG`, `startEnding`, `bloqueia`, `relogio`…) eram globais e alcançáveis pelo console. Agora o script é `type="module"`: nada vaza para `window` sem atribuição explícita.
+
+### Hub da Bott (`bott/index.html`, `src/bott/`, `src/app/bott-*.ts`)
+
+- Chaves de teste no localStorage, lidas só dentro de `import.meta.env.DEV`: `veu-bott-estado-teste` (sobreposição do estado do mundo) e `veu-bott-forca-nivel` (degrau forçado pelo `testeBott.nivel`). No build, as duas strings nem existem.
+- Slots de texto vazios mostram `[TEXTO A ENVIAR]` **só em dev**. No build, slot vazio = o evento não acontece (e o degrau não conta como visto).
+- Chat do terminal, variantes de deslize (`src/app/bott-chat-data.ts`): linha sem texto vira `[TEXTO A ENVIAR]` **só em dev**. No build, variante com alguma linha vazia não entra no sorteio.
+- Log `[bott] testeBott: …` no console ao abrir o hub: só em dev.
+- O checador também barra **termos ocultos**: palavras que não podem aparecer em lugar nenhum do repositório, nem no próprio script. Os padrões ficam em base64 em `OCULTOS` (`scripts/check-debug-leaks.js`) e são procurados no build normalizado (sem acentos, sem escapes `\uXXXX`/`\xXX`/`&#NNN;`, em maiúsculas). Para acrescentar um: `node -e "console.log(Buffer.from(process.argv[1]).toString('base64'))" "PADRAO_REGEX"`.
+- O checador barra no build: `testeBott`, `estado-teste`, `forca-nivel`, `TEXTO A ENVIAR`, `Dott` e `TRAÇA` (também nas formas escapadas `\u00c7`, `\xc7`, `&#199;`, `&Ccedil;`).
 
 ## 4. `console.log` / `console.warn`
 
@@ -92,13 +102,15 @@ Isto **não é debug**: é conteúdo do jogo que precisa estar no navegador para
 | ~~`id: "austin"` do segundo perfil do Arquivo Secreto~~ | `assets/main-*.js` | ✅ Resolvido: agora é `"registro-02"`. O id só era usado como React key. Os **comentários** que citam o Austin (seção 5) continuam no repositório, mas não vão para o build |
 | Bio completa do Hunter West (`Espiralium`, Torre de Memórias…) | `assets/main-*.js` | Já é exibida no Arquivo Secreto. Só é spoiler se o easter egg ainda não foi achado |
 | Senhas dos grupos (`ALPHA-7F3K-01`…) | `assets/main-*.js` | São digitadas sozinhas na tela, não são segredo |
+| Textos do hub da Bott (falas, pensamentos, checklist, log) | `assets/bott-*.js` | Em texto puro: são exibidos a qualquer visitante do hub. Os textos de evento (slots em `src/app/bott-data.ts`) ficam **cifrados** (XOR + base64, chave no próprio código, mesmo esquema da Interceptação): não são legíveis por busca de texto no repositório nem no JS publicado, mas quem ler o código consegue decifrar |
+| URL do hub (`<base>/bott/`) | `dist/bott/index.html` | Acessível direto por quem souber o caminho, como o countdown. A abelha, o nível 1 e as variantes de deslize do chat valem a partir de `BOTT_ABERTURA` (08/10/2026, pela hora do servidor; sem rede, pelo relógio local), mas a página em si não é bloqueada por data |
 
 ## 7. Arquivos de teste versionados fora do build
 
 `.gitignore` lista `Countdownlive/`, mas os arquivos foram commitados antes e **continuam no repositório público**:
 
 - `Countdownlive/_repro.html`, `_teste_mec.html`, `_teste_video.html`: páginas de teste
-- `Countdownlive/p3-terminal-countdown.html`: cópia antiga do countdown, com `?debug`, `?egg` e easter eggs de chat que não existem mais
+- `Countdownlive/p3-terminal-countdown.html`: versão antiga do countdown, com `?debug`, `?egg` e easter eggs de chat que não existem mais
 - `Countdownlive/p3-glitch-caos.html`
 
 ✅ Resolvido no commit `def3e948` (`git rm -r --cached Countdownlive`): a pasta não é mais rastreada e continua no disco. **Os commits antigos ainda contêm esses arquivos**, e quem navegar no histórico do GitHub ainda os encontra. Para apagar de vez é preciso reescrever o histórico (`git filter-repo`) e fazer force push.
@@ -119,6 +131,9 @@ Isto **não é debug**: é conteúdo do jogo que precisa estar no navegador para
 | `scripts/check-debug-leaks.js` | Novo. Varre `.js/.html/.css` do `dist/` e falha (exit 1) se achar algum padrão |
 | `package.json` | `check:leaks` e `build:check` (`npm run build && npm run check:leaks`) |
 | `.github/workflows/deploy-pages.yml` | O deploy roda `build:check` em vez de `build` |
+| `vite.config.ts` (hub da Bott) | Terceira entrada, `bott` → `bott/index.html` (página React própria em `src/bott/`) |
+| `scripts/check-debug-leaks.js` (hub da Bott) | Padrões novos: `testeBott`, `estado-teste`, `forca-nivel`, `TEXTO A ENVIAR`, `Dott`, `TRAÇA` |
+| `scripts/check-debug-leaks.js` (chat do terminal) | `testeBott.chat(n)` já é coberto por `testeBott`; padrão extra para o aviso que o atalho imprime no hub |
 
 ### Source maps
 `build.sourcemap` não estava definido (padrão do Vite: `false`, sem `.map`). Agora está `false` explícito. O script de checagem também falha se encontrar qualquer `.map` ou `sourceMappingURL=` no `dist/`.

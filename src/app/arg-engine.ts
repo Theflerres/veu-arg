@@ -25,8 +25,12 @@ export const ARG_CONFIG = {
   ACCUMULATE_TICK_MS: 1000,
   ACCUMULATE_FLUSH_MS: 5000,
 
-  // A cada quanto tempo o motor verifica se um evento agendado deve disparar
-  CYCLE_INTERVAL_MS: 5 * 60 * 1000, // 5 minutos
+  // Com o motor ligado, a cada quanto tempo confere se o tempo ativo passou
+  // do limite do próximo chat (o limite fica salvo em nextChatAtMs). Também
+  // confere CHECK_ON_START_MS depois de o motor ligar, para quem entra e sai
+  // de telas com frequência não ficar sem chat.
+  CHECK_INTERVAL_MS: 30 * 1000,
+  CHECK_ON_START_MS: 3000,
 
   // Evento A — Chat P3LUCHE vs Bott
   CHAT_FIRST_DELAY_MS: 30 * 60 * 1000, // primeiro chat após 30min
@@ -73,7 +77,8 @@ export function getAccumulatedMs(): number {
 }
 
 interface ArgEventHandlers {
-  onChatEvent: () => void;
+  /** Abre o chat. false = não deu agora (o limite não avança; tenta de novo na próxima checagem). */
+  onChatEvent: () => boolean | void;
 }
 
 /**
@@ -83,58 +88,56 @@ export function useArgEngine(active: boolean, handlers: ArgEventHandlers) {
   const handlersRef = useRef(handlers);
   handlersRef.current = handlers;
 
-  // Acumula tempo ativo (persistido periodicamente, sobrevive a reload)
+  // Acumula tempo ativo (persistido periodicamente, sobrevive a reload) e
+  // confere o limite do próximo chat. O limite é persistido, então desligar e
+  // religar o motor (abrir/fechar um Grupo) não zera nada: só o tempo com o
+  // motor ligado e a aba visível conta.
   useEffect(() => {
     if (!active) return;
-    const pending = { ms: 0 };
+    let pending = 0;
+
+    const flush = () => {
+      if (pending === 0) return;
+      const state = loadState();
+      state.accumulatedMs += pending;
+      pending = 0;
+      saveState(state);
+    };
+
+    const check = () => {
+      flush();
+      const state = loadState();
+      const nextChatAtMs = state.nextChatAtMs ?? ARG_CONFIG.CHAT_FIRST_DELAY_MS;
+      const chatCount = state.chatCount ?? 0;
+      if (state.accumulatedMs < nextChatAtMs) return;
+      if (handlersRef.current.onChatEvent() === false) return;
+      // Cadência 30 → 70 → 100 → 140 → 170 min... contada a partir do limite;
+      // se o tempo ativo já passou muito dele, conta a partir de agora (sem
+      // disparar vários chats seguidos).
+      const base =
+        state.accumulatedMs - nextChatAtMs > ARG_CONFIG.CHAT_SHORT_DELAY_MS ? state.accumulatedMs : nextChatAtMs;
+      saveState({
+        ...state,
+        nextChatAtMs:
+          base + (chatCount % 2 === 0 ? ARG_CONFIG.CHAT_LONG_DELAY_MS : ARG_CONFIG.CHAT_SHORT_DELAY_MS),
+        chatCount: chatCount + 1,
+      });
+    };
 
     const tick = setInterval(() => {
-      if (document.visibilityState === "visible") {
-        pending.ms += ARG_CONFIG.ACCUMULATE_TICK_MS;
-      }
+      if (document.visibilityState === "visible") pending += ARG_CONFIG.ACCUMULATE_TICK_MS;
     }, ARG_CONFIG.ACCUMULATE_TICK_MS);
-
-    const flush = setInterval(() => {
-      if (pending.ms === 0) return;
-      const state = loadState();
-      state.accumulatedMs += pending.ms;
-      pending.ms = 0;
-      saveState(state);
-    }, ARG_CONFIG.ACCUMULATE_FLUSH_MS);
+    const flushIv = setInterval(flush, ARG_CONFIG.ACCUMULATE_FLUSH_MS);
+    const checkIv = setInterval(check, ARG_CONFIG.CHECK_INTERVAL_MS);
+    const checkStart = setTimeout(check, ARG_CONFIG.CHECK_ON_START_MS);
 
     return () => {
       clearInterval(tick);
-      clearInterval(flush);
+      clearInterval(flushIv);
+      clearInterval(checkIv);
+      clearTimeout(checkStart);
+      flush(); // o tempo acumulado desde o último flush não se perde
     };
-  }, [active]);
-
-  // Ciclo de verificação do evento de chat agendado
-  useEffect(() => {
-    if (!active) return;
-
-    const cycle = setInterval(() => {
-      const state = loadState();
-      const accumulated = state.accumulatedMs;
-
-      const nextChatAtMs =
-        state.nextChatAtMs ?? ARG_CONFIG.CHAT_FIRST_DELAY_MS;
-      const chatCount = state.chatCount ?? 0;
-
-      if (accumulated >= nextChatAtMs) {
-        handlersRef.current.onChatEvent();
-        saveState({
-          ...state,
-          nextChatAtMs:
-            nextChatAtMs +
-            (chatCount % 2 === 0
-              ? ARG_CONFIG.CHAT_LONG_DELAY_MS
-              : ARG_CONFIG.CHAT_SHORT_DELAY_MS),
-          chatCount: chatCount + 1,
-        });
-      }
-    }, ARG_CONFIG.CYCLE_INTERVAL_MS);
-
-    return () => clearInterval(cycle);
   }, [active]);
 
   // Atalhos de debug — window.debugARG no DevTools Console. Só em `npm run dev`:

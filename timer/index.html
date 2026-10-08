@@ -576,7 +576,7 @@
     color:var(--phosphor-dim);
   }
 
-  /* glitch: duas cópias do texto (::before/::after) deslocadas e recortadas */
+  /* glitch: o texto duplicado em ::before/::after, deslocado e recortado */
   .p3l-glitch{ position:relative; display:inline-block; color:var(--err); }
   .p3l-glitch::before,
   .p3l-glitch::after{
@@ -3087,7 +3087,7 @@ function vigiaRelogio(){
 /* ---------- Áudio do P3 ----------
    Mesmo contrato do playHunterWest()/stopHunterWest() de src/app/sounds.ts
    (lá também existem playP3Timeout/stopP3Timeout para o site). Esta página é
-   estática e não importa módulos do site, por isso a cópia local. O arquivo é
+   estática e não importa módulos do site, por isso a réplica local. O arquivo é
    public/sounds/p3-timeout.mp3; se não existir (ou o navegador barrar o
    autoplay), playP3Timeout() resolve null e a onda cai no modo simulado.
    Resolve com o AnalyserNode quando o som toca pela Web Audio. */
