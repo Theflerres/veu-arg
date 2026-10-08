@@ -51,8 +51,12 @@ export const CHAT_FLASH_MS = 280;
 
 // ── Entrada do hub ──────────────────────────────────────────────────────────
 
-/** Duração total da animação de entrada. Pulável (clique/Esc) da 2ª visita em diante. */
-export const ENTRADA_MS = 7000;
+/**
+ * Duração total da animação de entrada (abelha → cartão de orientação →
+ * cabeçalho → fade). Pulável (clique/Esc) da 2ª visita em diante. O ritmo de
+ * cada etapa fica em src/bott/Entrada.tsx; este valor só precisa cobrir a soma.
+ */
+export const ENTRADA_MS = 10_800;
 
 /** Linhas de boot reveladas pelo rastro da abelha. tom "ambar" = âmbar. */
 export const ENTRADA_LINHAS: { texto: string; tom?: "ambar" }[] = [
@@ -65,9 +69,36 @@ export const ENTRADA_LINHAS: { texto: string; tom?: "ambar" }[] = [
   { texto: "> REGISTROS ...................... VERIFICADOS" },
 ];
 
+// ── Sigla ───────────────────────────────────────────────────────────────────
+
+export const SIGLA_PUBLICA = "Behind One Thin Thread";
+
+/** Cartão de orientação da entrada, nesta ordem. */
+export const SIGLA_BOAS_VINDAS = "Boas-vindas.";
+export const SIGLA_SAUDACAO = "Estamos felizes com a sua presença.";
+/** Uma linha por letra: a inicial vai num hexágono de linha fina. */
+export const SIGLA_ENTRADA: { letra: string; palavra: string }[] = [
+  { letra: "B", palavra: "Behind" },
+  { letra: "O", palavra: "One" },
+  { letra: "T", palavra: "Thin" },
+  { letra: "T", palavra: "Thread" },
+];
+export const SIGLA_LEMA = "Uma tarefa de cada vez. Um dia feliz de cada vez.";
+
+/**
+ * Por quanto tempo CABECALHO_PISCA, no cabeçalho do hub, vira SIGLA_B:
+ *   nivel1   na sobrescrita do P3, para quem está no nível 1
+ *   nivel2   na sobrescrita do P3, do nível 2 em diante
+ *   reinicio no corte do reinício (estado "contaram")
+ * No nível 0 ela não pisca.
+ */
+export const SIGLA_PISCA_MS = { nivel1: 120, nivel2: 250, reinicio: 400 };
+
 // ── Hub ─────────────────────────────────────────────────────────────────────
 
 export const CABECALHO = "BOTT // ASSISTENTE PESSOAL DE P3 - OPERANTE";
+/** Trecho de CABECALHO que dá lugar à sigla escondida quando ela pisca. */
+export const CABECALHO_PISCA = "ASSISTENTE PESSOAL DE P3";
 export const CONTROLE_ROTULO = "CONTROLE: P3";
 
 /** Valor final do contador TEMPO LIGADA, depois de bugar. */
@@ -123,14 +154,55 @@ export const DIAGNOSTICO = {
   desligamentos: 2,
 };
 
-/** Barra de progresso do DIAGNÓSTICO (rótulo censurado): só para nestes valores; nunca passa do último. */
+/**
+ * Barra de progresso do DIAGNÓSTICO (rótulo censurado). Só para nestes
+ * valores; nunca passa do último.
+ *
+ * Teto global: o valor exibido nunca passa do teto do dia, que é o mesmo
+ * para todos — calculado pela hora confiável a partir de BOTT_ABERTURA,
+ * crescendo de forma desigual (alguns dias param; a sequência sai de uma
+ * semente fixa) até chegar ao último degrau em PROGRESSO_B_DIAS dias. Abaixo
+ * do teto, o valor sobe um degrau quando o visitante fica parado (ociosoMs) ou
+ * volta de outra aba; às vezes recua um (nunca a partir do último degrau).
+ */
 export const PROGRESSO_B = {
   degraus: [11, 22, 33, 44, 55, 66, 77, 88, 99],
-  /** Degrau de quem nunca viu a barra. */
-  inicial: 2,
+  /** Degrau de quem nunca viu a barra (limitado pelo teto do dia). */
+  inicial: 1,
   /** Sem mouse/teclado/toque por este tempo = "parado". */
   ociosoMs: 20_000,
+  /** Teto (%) no dia da abertura. */
+  tetoInicial: 22,
+  /** Fração dos dias em que o teto não sobe. */
+  diasParados: 0.3,
+  /** Semente da sequência de dias (mude para sortear outra curva). */
+  semente: 0x0b0717,
+  /** Chance de recuar um degrau em vez de subir. Não vale no último degrau (99%): dali não recua. */
+  chanceRecuo: 0.12,
 };
+
+/** Em quantos dias, a partir de BOTT_ABERTURA, o teto chega a 99%. */
+export const PROGRESSO_B_DIAS = 21;
+
+// ── Cena do 99% ─────────────────────────────────────────────────────────────
+// Quando o valor exibido chega ao último degrau: a barra treme tentando
+// passar, glitch forte no DIAGNÓSTICO, tremor na tela e uma frase em
+// vermelho (FRASES_P3) junto da barra. Na 1ª vez que o visitante vê o 99%, na
+// hora; depois, com a barra em 99%, só após VERMELHO_OCIOSO_MS parado, no
+// máximo VERMELHO_MAX_POR_VISITA vezes por visita e VERMELHO_MAX_POR_DIA por
+// dia. Som opcional: public/sounds/bott-vermelho.mp3.
+
+/** Reservado a esta cena. */
+export const VERMELHO_COR = "#FF2B2B";
+export const VERMELHO_OCIOSO_MS = 30_000;
+export const VERMELHO_MAX_POR_VISITA = 1;
+export const VERMELHO_MAX_POR_DIA = 3;
+/** Frase na tela depois de digitada. */
+export const VERMELHO_VISIVEL_MS = 4000;
+/** Por caractere (digitação rápida). */
+export const VERMELHO_DIGITA_MS = 28;
+/** Glitch forte no painel e tremor na tela. */
+export const CENA99_GLITCH_MS = 700;
 
 /** LOG — linhas fixas, em ordem. Revisões do P3 entram depois, com data real. */
 export const LOG_BASE: { quando: string; msg: string }[] = [
@@ -207,6 +279,29 @@ const SLOTS: Record<SlotId, string[]> = {
   "mundo-b": [],
   "mundo-c": [],
 };
+
+// Cifrada com a mesma chave dos slots; decifrada só quando a sigla pisca.
+const SIGLA_B_CIFRA = "JA4EARo9CVQ9GQ4PZFxeQgEJAhw=";
+
+export function siglaB(): string {
+  return decifraTexto(SIGLA_B_CIFRA, CHAVE_SLOTS);
+}
+
+// Frases da cena do 99% (sorteadas), cifradas com a chave dos slots.
+const FRASES_P3_CIFRAS = [
+  "BwgYC1tSAbfKAQ==",
+  "CKLVABqxxlQaCxQPXVtcUggVGQ==",
+  "AxIGCkgX",
+  "AAgHGl9SChlJHARfX0FCWA==",
+  "AxRWDkwbHBtJHxROXlBe",
+  "EA4aG19SDlQNARNCWUY=",
+  "BwgYC1tSAbfKAUFbVRRSXwcMEwY=",
+  "CKLVABoTCBsbDw==",
+];
+
+export function frasesP3(): string[] {
+  return FRASES_P3_CIFRAS.map((c) => decifraTexto(c, CHAVE_SLOTS));
+}
 
 /** Linhas decifradas de um slot ([] = vazio; em dev, o marcador). */
 export function textosDoSlot(id: SlotId): string[] {

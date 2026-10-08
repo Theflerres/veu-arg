@@ -14,6 +14,8 @@ export const SOUND_FILES = {
   hunterWest: "hunter-west.mp3", // easter egg do Scanner — som próprio, nada reaproveitado
   p3Timeout: "p3-timeout.mp3", // fala do P3 quando o relógio do sistema foi mexido (countdown)
   bottAbelha: "bott-abelha.mp3", // abelha rara do site principal (components/AbelhaRara.tsx)
+  bottVermelho: "bott-vermelho.mp3", // cena do 99% no hub (src/bott/paineis.tsx)
+  bottSino: "bott-sino.mp3", // cartão de orientação da entrada do hub (src/bott/Entrada.tsx)
 } as const;
 
 export type SoundName = keyof typeof SOUND_FILES;
@@ -165,6 +167,8 @@ let heartbeatLoop: HTMLAudioElement | null = null;
 let hunterWestSound: HTMLAudioElement | null = null;
 let p3TimeoutSound: HTMLAudioElement | null = null;
 let bottAbelhaSound: HTMLAudioElement | null = null;
+let bottVermelhoSound: HTMLAudioElement | null = null;
+let bottSinoSound: HTMLAudioElement | null = null;
 
 function musicaJaTransicionou(): boolean {
   try {
@@ -272,6 +276,8 @@ export function stopAllAudio() {
   stopP3Timeout();
   stopP3Sophia();
   stopBottAbelha();
+  stopBottVermelho();
+  stopBottSino();
 
   for (const audio of cache.values()) {
     try {
@@ -322,6 +328,8 @@ export function pausaAudioDoSite(): () => void {
       hunterWestSound,
       p3TimeoutSound,
       bottAbelhaSound,
+      bottVermelhoSound,
+      bottSinoSound,
       glitchLoop,
       p3Sophia.el,
       ...cache.values(),
@@ -458,6 +466,51 @@ export function stopBottAbelha() {
   if (bottAbelhaSound) {
     bottAbelhaSound.pause();
     bottAbelhaSound.currentTime = 0;
+  }
+}
+
+// ── HUB: CENA DO 99% ────────────────────────────────────────────────────────
+// Toca quando a frase em vermelho aparece. Arquivo próprio:
+// `public/sounds/bott-vermelho.mp3`. Se faltar, a cena roda muda.
+
+export function playBottVermelho(volume = 0.6) {
+  try {
+    bottVermelhoSound ??= new Audio(soundUrl("bottVermelho"));
+    bottVermelhoSound.volume = volume;
+    bottVermelhoSound.currentTime = 0;
+    void bottVermelhoSound.play().catch(() => {});
+  } catch {
+    /* ignore */
+  }
+}
+
+export function stopBottVermelho() {
+  if (bottVermelhoSound) {
+    bottVermelhoSound.pause();
+    bottVermelhoSound.currentTime = 0;
+  }
+}
+
+// ── HUB: SININHO DA ENTRADA ─────────────────────────────────────────────────
+// Toca quando o cartão de orientação diz boas-vindas. Arquivo próprio:
+// `public/sounds/bott-sino.mp3`. Se faltar (ou o navegador barrar o som sem
+// um clique antes), a entrada roda muda.
+
+export function playBottSino(volume = 0.35) {
+  try {
+    bottSinoSound ??= new Audio(soundUrl("bottSino"));
+    bottSinoSound.volume = volume;
+    bottSinoSound.currentTime = 0;
+    void bottSinoSound.play().catch(() => {});
+  } catch {
+    /* ignore */
+  }
+}
+
+export function stopBottSino() {
+  if (bottSinoSound) {
+    bottSinoSound.pause();
+    bottSinoSound.currentTime = 0;
   }
 }
 

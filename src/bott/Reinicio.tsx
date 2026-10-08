@@ -8,7 +8,7 @@ import { AMBAR, DISPLAY, HEX_CLIP, LABEL, VERDE, VERDE_DIM } from "./estilo";
 // Reinício (estilo modem caindo): SINAL INSTÁVEL, barras de sinal caindo,
 // LEDs hexagonais apagando um a um → tela preta (onApagado: o hub por baixo
 // remonta do zero) → REINICIANDO..., LEDs voltando → fade (onFim).
-// `atrasoMs` adia o começo, sem nada na tela.
+// `atrasoMs` adia o começo, sem nada na tela; `onInicio` avisa o corte.
 
 const BLOCOS = "█▓▒░▚▞▙▟╳";
 
@@ -87,21 +87,24 @@ const LEDS = 7;
 
 export function Reinicio({
   atrasoMs = 0,
+  onInicio,
   onApagado,
   onFim,
 }: {
   atrasoMs?: number;
+  onInicio?: () => void;
   onApagado: () => void;
   onFim: () => void;
 }) {
   const [t, setT] = useState(-1); // -1 = ainda no atraso
-  const cbs = useRef({ onApagado, onFim });
-  cbs.current = { onApagado, onFim };
+  const cbs = useRef({ onInicio, onApagado, onFim });
+  cbs.current = { onInicio, onApagado, onFim };
 
   useEffect(() => {
     let iv: ReturnType<typeof setInterval>;
     let apagou = false;
     const comeca = setTimeout(() => {
+      cbs.current.onInicio?.();
       const t0 = performance.now();
       iv = setInterval(() => {
         const dt = performance.now() - t0;

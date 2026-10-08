@@ -1,3 +1,5 @@
+import { VERMELHO_COR } from "../app/bott-data";
+
 // Paleta e CSS do hub da Bott. Verde fósforo = P3 no controle; âmbar/mel
 // fica reservado para os deslizes e "vaza" por baixo do verde (text-shadow
 // âmbar deslocado sob o texto verde, intensidade em --vaza).
@@ -7,6 +9,7 @@ export const VERDE_MID = "#2BEA7B";
 export const VERDE_DIM = "#0A3B23";
 export const VERDE_APAGADO = "rgba(0,255,102,0.45)";
 export const AMBAR = "#FFB000";
+export const LARANJA = "#FF8A1F";
 export const VERMELHO = "#FF3B3B";
 export const FUNDO = "#020503";
 
@@ -38,6 +41,11 @@ html,body{margin:0;height:100%;background:${FUNDO}}
 @keyframes bh-falha{0%,100%{transform:none;filter:none}20%{transform:translate(-3px,1px) skewX(-4deg);filter:drop-shadow(3px 0 rgba(255,176,0,.7)) drop-shadow(-3px 0 rgba(0,229,255,.5))}40%{transform:translate(2px,-1px);clip-path:inset(10% 0 40% 0)}60%{transform:translate(-1px,0);clip-path:inset(55% 0 5% 0)}80%{transform:translate(1px,1px);clip-path:none}}
 @keyframes bh-sobrescreve{0%{filter:none;transform:none}25%{filter:drop-shadow(4px 0 ${AMBAR}) drop-shadow(-4px 0 #00E5FF);transform:translateX(-3px) skewX(8deg)}50%{transform:translateX(4px);opacity:.6}75%{transform:translateX(-2px) skewX(-6deg);opacity:.9}100%{filter:none;transform:none;opacity:1}}
 @keyframes bh-vaza{0%,100%{opacity:.75}50%{opacity:1}}
+@keyframes bh-glitch-forte{0%,100%{transform:none;filter:none;clip-path:none}10%{transform:translate(-8px,2px) skewX(-8deg);filter:drop-shadow(6px 0 rgba(255,0,64,.85)) drop-shadow(-6px 0 rgba(0,229,255,.85))}22%{transform:translate(7px,-2px);clip-path:inset(12% 0 48% 0)}34%{transform:translate(-5px,0) scaleY(1.03);clip-path:inset(58% 0 8% 0);filter:drop-shadow(-7px 0 rgba(255,0,64,.8)) drop-shadow(7px 0 rgba(0,229,255,.8)) brightness(1.4)}46%{transform:translate(4px,1px);clip-path:inset(30% 0 32% 0)}58%{transform:translate(-3px,-1px) skewX(6deg);clip-path:none;filter:drop-shadow(4px 0 rgba(255,0,64,.7)) drop-shadow(-4px 0 rgba(0,229,255,.7))}70%{transform:translate(2px,0);clip-path:inset(0 0 65% 0)}82%{transform:none;clip-path:inset(40% 0 0 0)}}
+@keyframes bh-tremor{0%,100%{transform:none}20%{transform:translate(-2px,1px)}40%{transform:translate(2px,-1px)}60%{transform:translate(-1px,-1px)}80%{transform:translate(1px,1px)}}
+@keyframes bh-barra-tenta{0%,100%{transform:none}25%{transform:translateX(-2px)}50%{transform:translateX(2px)}75%{transform:translateX(-1px)}}
+@keyframes bh-frase-sai{0%{opacity:1;clip-path:none;transform:none}30%{clip-path:inset(0 0 55% 0);transform:translateX(4px)}60%{clip-path:inset(45% 0 0 0);transform:translateX(-5px);opacity:.7}100%{opacity:0;clip-path:inset(50% 0 50% 0)}}
+@keyframes bh-sigla-tremor{0%,100%{transform:none}25%{transform:translate(-1px,.5px)}50%{transform:translate(1px,-.5px) skewX(-6deg)}75%{transform:translate(-.5px,0)}}
 
 .bh-raiz{position:fixed;inset:0;overflow-y:auto;overflow-x:hidden;background:${FUNDO};color:${VERDE};font-family:${CORPO};--vaza:.22}
 .bh-favo{position:fixed;inset:0;pointer-events:none;background-image:${FAVO};background-size:56px 100px;-webkit-mask-image:radial-gradient(ellipse at 50% 40%,#000 0%,rgba(0,0,0,.5) 55%,transparent 100%);mask-image:radial-gradient(ellipse at 50% 40%,#000 0%,rgba(0,0,0,.5) 55%,transparent 100%)}
@@ -68,6 +76,12 @@ html,body{margin:0;height:100%;background:${FUNDO}}
 .bh-titulo::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,rgba(0,255,102,.3),transparent)}
 .bh-hex{display:inline-block;width:9px;height:8px;background:${VERDE};clip-path:${HEX_CLIP};box-shadow:0 0 6px ${VERDE}}
 
+.bh-sigla-b{display:inline-block;color:${LARANJA};text-shadow:0 0 8px rgba(255,138,31,.75),2px 0 rgba(0,229,255,.4),-2px 0 rgba(255,0,64,.35);animation:bh-sigla-tremor .09s linear infinite}
+.bh-painel.bh-glitch-forte{animation:bh-glitch-forte .7s steps(1) both !important;animation-delay:0s !important}
+.bh-raiz.bh-tremor{animation:bh-tremor .09s linear infinite}
+.bh-barra-tenta{animation:bh-barra-tenta .07s linear infinite}
+.bh-frase-p3{font-family:${LABEL};font-size:12px;letter-spacing:.2em;color:${VERMELHO_COR};text-shadow:0 0 8px rgba(255,43,43,.65),0 0 18px rgba(255,43,43,.3)}
+.bh-frase-p3-sai{animation:bh-frase-sai .35s steps(3) both}
 .bh-sobrescreve{animation:bh-sobrescreve .3s steps(3) infinite}
 .bh-pular{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);font-family:${LABEL};font-size:10px;letter-spacing:.24em;color:rgba(0,255,102,.35);animation:bh-respira 2.4s ease-in-out infinite;z-index:3;white-space:nowrap}
 .bh-voltar{font-family:${LABEL};font-size:10px;letter-spacing:.18em;color:rgba(0,255,102,.3);background:none;border:none;padding:6px;cursor:pointer;text-decoration:none;transition:color .2s ease}

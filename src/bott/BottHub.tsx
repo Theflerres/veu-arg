@@ -3,6 +3,7 @@ import { AbelhaPixel } from "../app/components/AbelhaPixel";
 import {
   AJUSTES_ESTADO,
   CABECALHO,
+  CABECALHO_PISCA,
   CICLO_REINICIO,
   DIAGNOSTICO,
   LOG_BASE,
@@ -12,11 +13,14 @@ import {
   PENSAMENTOS,
   PENSAMENTO_SOBRESCRITO,
   RITMO,
+  SIGLA_PISCA_MS,
+  siglaB,
   textosDoSlot,
   type EstadoMundo,
   type SlotId,
 } from "../app/bott-data";
 import {
+  DEGRAUS,
   concluiDegrau,
   estadoMundo,
   leLog,
@@ -25,6 +29,7 @@ import {
   registraNoLog,
   registraVisita,
 } from "../app/bott-progresso";
+import { registraTesteBott } from "../app/bott-teste";
 import { agora, horaSP, sincronizaHora } from "../app/hora-confiavel";
 import { Entrada } from "./Entrada";
 import { CSS, AMBAR, DISPLAY, LABEL, VERDE, VERDE_APAGADO } from "./estilo";
@@ -53,6 +58,11 @@ import { Reinicio, Surto } from "./Reinicio";
 //
 // Estado "contaram": a cada CICLO_REINICIO.intervaloMs, surto + reinício; o
 // reinício remonta o hub (key = ciclo) e o TEMPO LIGADA buga de novo.
+//
+// Sigla: por um instante, o trecho CABECALHO_PISCA do cabeçalho vira siglaB()
+// (SIGLA_PISCA_MS): em cada sobrescrita do P3, para quem está no nível 1 (ou
+// chegando nele) e, mais longa, do nível 2 em diante; e no corte de cada
+// reinício. No nível 0 não pisca.
 
 const sorteia = (min: number, max: number) => min + Math.random() * (max - min);
 const pega = <T,>(lista: T[]) => lista[Math.floor(Math.random() * lista.length)];
@@ -70,6 +80,26 @@ export function BottHub() {
   const [fase, setFase] = useState<"entrada" | "hub">("entrada");
   const [ciclo, setCiclo] = useState(0);
   const [reiniciando, setReiniciando] = useState(false);
+  const [piscando, setPiscando] = useState(false);
+  const [replaySigla, setReplaySigla] = useState(false);
+
+  // Piscada da sigla: uma de cada vez; uma nova substitui a anterior.
+  const piscaTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const piscaSigla = useCallback((ms: number) => {
+    if (ms <= 0) return;
+    clearTimeout(piscaTimer.current);
+    setPiscando(true);
+    piscaTimer.current = setTimeout(() => setPiscando(false), ms);
+  }, []);
+  useEffect(() => () => clearTimeout(piscaTimer.current), []);
+
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+    registraTesteBott({
+      sigla: () => setReplaySigla(true),
+      piscaSigla: (ms?: number) => piscaSigla(ms ?? SIGLA_PISCA_MS.nivel2),
+    });
+  }, [piscaSigla]);
 
   // O degrau da visita é decidido uma vez só (depois da hora confiável) e não
   // se repete quando o hub remonta no reinício.
@@ -88,7 +118,9 @@ export function BottHub() {
       <div className="bh-favo" />
       <div className="bh-brilho" />
 
-      {fase === "hub" && <Hub key={ciclo} estado={estado} pegaDegrau={pegaDegrau} />}
+      {fase === "hub" && (
+        <Hub key={ciclo} estado={estado} pegaDegrau={pegaDegrau} piscando={piscando} onPisca={piscaSigla} />
+      )}
 
       {estado === "contaram" && fase === "hub" && !reiniciando && (
         <CicloReinicio key={ciclo} onReiniciar={() => setReiniciando(true)} />
@@ -96,12 +128,14 @@ export function BottHub() {
       {reiniciando && (
         <Reinicio
           atrasoMs={CICLO_REINICIO.atrasoMs}
+          onInicio={() => piscaSigla(SIGLA_PISCA_MS.reinicio)}
           onApagado={() => setCiclo((c) => c + 1)}
           onFim={() => setReiniciando(false)}
         />
       )}
 
       {fase === "entrada" && <Entrada pulavel={visitas > 1} onFim={fimEntrada} />}
+      {replaySigla && <Entrada soSigla pulavel onFim={() => setReplaySigla(false)} />}
 
       <div className="bh-crt-grao" />
       <div className="bh-crt-linhas" />
@@ -127,8 +161,27 @@ function CicloReinicio({ onReiniciar }: { onReiniciar: () => void }) {
 
 const PAINEIS = 6; // para as micro-falhas sortearem um
 
-function Hub({ estado, pegaDegrau }: { estado: EstadoMundo; pegaDegrau: () => SlotId | null }) {
+/** Duração da piscada da sigla numa sobrescrita do P3, pelo nível do visitante (0 = não pisca). */
+function piscaDaSobrescrita(degrau: SlotId | null): number {
+  const nivel = Math.max(leNivel(), degrau ? DEGRAUS.indexOf(degrau) + 1 : 0);
+  if (nivel >= 2) return SIGLA_PISCA_MS.nivel2;
+  return nivel === 1 ? SIGLA_PISCA_MS.nivel1 : 0;
+}
+
+function Hub({
+  estado,
+  pegaDegrau,
+  piscando,
+  onPisca,
+}: {
+  estado: EstadoMundo;
+  pegaDegrau: () => SlotId | null;
+  piscando: boolean;
+  onPisca: (ms: number) => void;
+}) {
   const aj = AJUSTES_ESTADO[estado];
+  const onPiscaRef = useRef(onPisca);
+  onPiscaRef.current = onPisca;
   const [pens, setPens] = useState<EstadoPensamento>(() => ({
     texto: pega(PENSAMENTOS),
     tom: "verde",
@@ -165,6 +218,7 @@ function Hub({ estado, pegaDegrau }: { estado: EstadoMundo; pegaDegrau: () => Sl
       await espera(digitar(texto) + RITMO.deslizeMs);
       if (!vivo) return;
       setPens((p) => ({ ...p, sobrescrevendo: true }));
+      onPiscaRef.current(piscaDaSobrescrita(degrau));
       await espera(RITMO.sobrescritaMs);
       if (!vivo) return;
       setPens({ texto: PENSAMENTO_SOBRESCRITO, tom: "verde", sobrescrevendo: false, n: ++n });
@@ -268,7 +322,7 @@ function Hub({ estado, pegaDegrau }: { estado: EstadoMundo; pegaDegrau: () => Sl
         <span style={{ color: VERDE, display: "flex", alignItems: "center", gap: 10 }}>
           <AbelhaPixel largura={26} asaMs={90} />
           <span className="bh-verde" style={{ fontFamily: DISPLAY, fontSize: 20, letterSpacing: "0.08em" }}>
-            {CABECALHO}
+            <Cabecalho piscando={piscando} />
           </span>
           <span
             aria-hidden="true"
@@ -321,6 +375,24 @@ function Hub({ estado, pegaDegrau }: { estado: EstadoMundo; pegaDegrau: () => Sl
 
       {camadaFinal && <SlotTela id="camada-final" onFim={() => { concluiDegrau("camada-final"); setCamadaFinal(false); }} />}
     </div>
+  );
+}
+
+// ── Cabeçalho (com o trecho que pisca) ──────────────────────────────────────
+
+const [CABECALHO_ANTES, CABECALHO_DEPOIS] = (() => {
+  const i = CABECALHO.indexOf(CABECALHO_PISCA);
+  return i < 0 ? [CABECALHO, ""] : [CABECALHO.slice(0, i), CABECALHO.slice(i + CABECALHO_PISCA.length)];
+})();
+
+function Cabecalho({ piscando }: { piscando: boolean }) {
+  if (!piscando || !CABECALHO.includes(CABECALHO_PISCA)) return <>{CABECALHO}</>;
+  return (
+    <>
+      {CABECALHO_ANTES}
+      <span className="bh-sigla-b">{siglaB().toUpperCase()}</span>
+      {CABECALHO_DEPOIS}
+    </>
   );
 }
 

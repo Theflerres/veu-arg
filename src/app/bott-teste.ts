@@ -10,6 +10,9 @@
 //   testeBott.nivel(n)          abre o hub disparando o degrau n (1–3; 4 = camada final; 0 zera)
 //   testeBott.estado(e)         sobrepõe ESTADO_MUNDO ("desconhecido" | "nao-contaram" | "contaram")
 //   testeBott.zerar()           apaga todas as chaves veu-bott-*
+//   testeBott.sigla()           mostra de novo o cartão de orientação da entrada, sem a abelha (no hub)
+//   testeBott.piscaSigla(ms?)   faz o cabeçalho do hub piscar para a sigla escondida (padrão: SIGLA_PISCA_MS.nivel2)
+//   testeBott.noventaENove()    no hub, leva a barra do DIAGNÓSTICO ao último degrau (ignora o teto) e dispara a cena
 
 import { CHAVES, CHAVES_DEV, HUB_URL, gravaNivel } from "./bott-progresso";
 
@@ -20,6 +23,9 @@ interface TesteBott {
   nivel: (n: number) => void;
   estado: (e: string) => void;
   zerar: () => void;
+  sigla: () => void;
+  piscaSigla: (ms?: number) => void;
+  noventaENove: () => void;
 }
 
 declare global {
@@ -36,6 +42,9 @@ export function registraTesteBott(extra: Partial<TesteBott> = {}) {
       abrirHub,
       abelha: () => console.info("[bott] a abelha só voa no site principal, depois da senha"),
       chat: () => console.info("[bott] o chat só abre no site principal, depois da senha"),
+      sigla: () => console.info("[bott] a sigla só aparece no hub"),
+      piscaSigla: () => console.info("[bott] a sigla só aparece no hub"),
+      noventaENove: () => console.info("[bott] a barra só existe no hub"),
       nivel: (n) => {
         const alvo = Math.max(0, Math.min(4, Math.floor(n)));
         try {

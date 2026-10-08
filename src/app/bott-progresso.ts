@@ -13,7 +13,19 @@
 //   4  camada final: depois do 3, com CAMADA_FINAL_ATIVA
 // No máximo um degrau por visita.
 
-import { BOTT_ABERTURA, CAMADA_FINAL_ATIVA, ESTADO_MUNDO, PROGRESSO_B, textosDoSlot, type EstadoMundo, type SlotId } from "./bott-data";
+import {
+  BOTT_ABERTURA,
+  CAMADA_FINAL_ATIVA,
+  ESTADO_MUNDO,
+  PROGRESSO_B,
+  PROGRESSO_B_DIAS,
+  VERMELHO_MAX_POR_DIA,
+  VERMELHO_MAX_POR_VISITA,
+  textosDoSlot,
+  type EstadoMundo,
+  type SlotId,
+} from "./bott-data";
+import { agora, horaSP } from "./hora-confiavel";
 
 export const HUB_URL = `${import.meta.env.BASE_URL}bott/`;
 
@@ -25,14 +37,15 @@ export const CHAVES = {
   chatVistos: "veu-bott-chat-vistos", // variantes de deslize já mostradas
   log: "veu-bott-log",
   progressoB: "veu-bott-pb",
+  cena99: "veu-bott-cena99", // { vista, dia, vezes } da cena do 99%
   /** Gatilho do nível 3: gravado pelo chat do terminal ao terminar uma variante de deslize. */
   gatilho3: "veu-bott-g3",
 } as const;
 
 /** Chaves de teste — só existem em `npm run dev` (ver bott-teste.ts). */
 export const CHAVES_DEV = import.meta.env.DEV
-  ? { estado: "veu-bott-estado-teste", forca: "veu-bott-forca-nivel" }
-  : { estado: "", forca: "" };
+  ? { estado: "veu-bott-estado-teste", forca: "veu-bott-forca-nivel", teto: "veu-bott-teto-teste" }
+  : { estado: "", forca: "", teto: "" };
 
 /** Contador da Interceptação (mesma chave de components/Interceptacao.tsx). */
 const INTERCEPTACAO_KEY = "veu_interceptacao_v1";
@@ -165,16 +178,127 @@ export function registraNoLog(e: EntradaLog) {
 
 // ── Barra de progresso do DIAGNÓSTICO ─────────────────────────────────────────
 
-export function leProgressoB(): number {
-  return Math.max(
-    0,
-    Math.min(PROGRESSO_B.degraus.length - 1, Math.floor(leNumero(CHAVES.progressoB, PROGRESSO_B.inicial)))
-  );
+const DIA_MS = 24 * 60 * 60 * 1000;
+const ULTIMO_B = PROGRESSO_B.degraus.length - 1;
+
+// Peso de cada dia na subida do teto: sequência fixa (mesma para todos), com
+// PROGRESSO_B.diasParados dos dias em zero. O último dia nunca é zero, para o
+// teto só chegar ao fim no dia PROGRESSO_B_DIAS.
+const PESOS_DIAS: number[] = (() => {
+  let a = PROGRESSO_B.semente >>> 0;
+  const aleatorio = () => {
+    // mulberry32
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+  return Array.from({ length: PROGRESSO_B_DIAS }, (_, i) => {
+    const r = aleatorio();
+    if (i < PROGRESSO_B_DIAS - 1 && r < PROGRESSO_B.diasParados) return 0;
+    return 0.4 + r;
+  });
+})();
+const PESO_TOTAL = PESOS_DIAS.reduce((s, p) => s + p, 0);
+
+/** Dias inteiros desde BOTT_ABERTURA pela hora confiável (0 = dia da abertura). */
+export function diaDoProgressoB(ms: number = agora()): number {
+  return Math.max(0, Math.floor((ms - BOTT_ABERTURA) / DIA_MS));
 }
 
-/** Sobe um degrau (nunca passa do último) e devolve o novo índice. */
+/** Teto (%) do dia `d`: PROGRESSO_B.tetoInicial no dia 0, 99 a partir do dia PROGRESSO_B_DIAS. */
+export function tetoPercentual(d: number): number {
+  if (d >= PROGRESSO_B_DIAS) return PROGRESSO_B.degraus[ULTIMO_B];
+  const subida = PESOS_DIAS.slice(0, d).reduce((s, p) => s + p, 0) / PESO_TOTAL;
+  const ini = PROGRESSO_B.tetoInicial;
+  return ini + (PROGRESSO_B.degraus[ULTIMO_B] - ini) * subida;
+}
+
+/** Índice do maior degrau permitido hoje. */
+export function tetoProgressoB(): number {
+  if (import.meta.env.DEV && le(CHAVES_DEV.teto) === "1") return ULTIMO_B;
+  const teto = tetoPercentual(diaDoProgressoB());
+  let i = 0;
+  while (i < ULTIMO_B && PROGRESSO_B.degraus[i + 1] <= teto) i++;
+  return i;
+}
+
+/** Degrau exibido: o guardado, limitado pelo teto do dia. */
+export function leProgressoB(): number {
+  const guardado = Math.floor(leNumero(CHAVES.progressoB, PROGRESSO_B.inicial));
+  return Math.max(0, Math.min(tetoProgressoB(), guardado, ULTIMO_B));
+}
+
+/**
+ * Um passo: sobe um degrau (até o teto do dia) ou, às vezes, recua um. No
+ * último degrau não recua: o 99% fica travado (o teto do dia continua
+ * valendo, via leProgressoB). Devolve o novo índice.
+ */
 export function avancaProgressoB(): number {
-  const n = Math.min(PROGRESSO_B.degraus.length - 1, leProgressoB() + 1);
+  const atual = leProgressoB();
+  const podeRecuar = atual > 0 && atual < ULTIMO_B;
+  const n =
+    podeRecuar && Math.random() < PROGRESSO_B.chanceRecuo ? atual - 1 : Math.min(tetoProgressoB(), atual + 1);
   grava(CHAVES.progressoB, String(n));
   return n;
+}
+
+/** Só em dev (testeBott.noventaENove): ignora o teto e põe a barra no último degrau. */
+export function forcaUltimoProgressoB() {
+  if (import.meta.env.DEV) {
+    grava(CHAVES_DEV.teto, "1");
+    grava(CHAVES.progressoB, String(ULTIMO_B));
+  }
+}
+
+export function ultimoProgressoB(): number {
+  return ULTIMO_B;
+}
+
+// ── Cena do 99% ─────────────────────────────────────────────────────────────
+
+interface RegistroCena {
+  vista: boolean;
+  dia: string; // AAAA-MM-DD no horário de Brasília
+  vezes: number; // cenas nesse dia
+}
+
+let cenasNestaVisita = 0;
+
+function hojeSP(): string {
+  const h = horaSP();
+  return `${h.ano}-${String(h.mes).padStart(2, "0")}-${String(h.dia).padStart(2, "0")}`;
+}
+
+function leCena(): RegistroCena {
+  try {
+    const r = JSON.parse(le(CHAVES.cena99) ?? "null") as Partial<RegistroCena> | null;
+    return {
+      vista: r?.vista === true,
+      dia: typeof r?.dia === "string" ? r.dia : "",
+      vezes: typeof r?.vezes === "number" ? r.vezes : 0,
+    };
+  } catch {
+    return { vista: false, dia: "", vezes: 0 };
+  }
+}
+
+/** O visitante já viu a cena alguma vez? */
+export function cena99Vista(): boolean {
+  return leCena().vista;
+}
+
+/** Ainda cabe uma cena nesta visita e hoje? */
+export function cena99Disponivel(): boolean {
+  if (cenasNestaVisita >= VERMELHO_MAX_POR_VISITA) return false;
+  const r = leCena();
+  return r.dia !== hojeSP() || r.vezes < VERMELHO_MAX_POR_DIA;
+}
+
+export function registraCena99() {
+  cenasNestaVisita++;
+  const r = leCena();
+  const hoje = hojeSP();
+  grava(CHAVES.cena99, JSON.stringify({ vista: true, dia: hoje, vezes: r.dia === hoje ? r.vezes + 1 : 1 }));
 }

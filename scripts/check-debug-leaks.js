@@ -34,10 +34,14 @@ const PADROES = [
   { nome: "testarBloqueio()", re: /testarBloqueio/ },
   { nome: "window.testeInterceptacao", re: /testeInterceptacao/ },
   // Hub da Bott (src/app/bott-teste.ts): atalhos e chaves de teste.
-  // window.testeBott inclui abrirHub, abelha, chat(n), nivel, estado, zerar.
+  // window.testeBott inclui abrirHub, abelha, chat(n), nivel, estado, zerar, sigla, piscaSigla, noventaENove.
   { nome: "window.testeBott", re: /testeBott/ },
   { nome: "aviso de testeBott.chat", re: /o chat só abre no site principal/ },
   { nome: "aviso de testeBott.chat (abelha)", re: /a abelha está na vez/ },
+  { nome: "aviso de testeBott.sigla/piscaSigla", re: /a sigla só aparece no hub/ },
+  { nome: "testeBott.noventaENove", re: /noventaENove/ },
+  { nome: "aviso de testeBott.noventaENove", re: /a barra só existe no hub/ },
+  { nome: "chave veu-bott-teto-teste", re: /teto-teste/ },
   { nome: "chave veu-bott-estado-teste", re: /estado-teste/ },
   { nome: "chave veu-bott-forca-nivel", re: /forca-nivel/ },
   { nome: "marcador [TEXTO A ENVIAR]", re: /TEXTO A ENVIAR/ },
@@ -64,6 +68,8 @@ const OCULTOS = [
   "U1VCU1RJVFVUQQ==",
   "XGJDT1BJQVM/XGI=",
   "XGJWRVJTQU8gQlxi",
+  "VFdPXHMrVEhPVUdIVFM=",
+  "Qk9STlxzK09GXHMrVFdP",
 ].map((b64, i) => ({
   nome: `termo oculto #${i + 1}`,
   re: new RegExp(Buffer.from(b64, "base64").toString("utf8"), "g"),
