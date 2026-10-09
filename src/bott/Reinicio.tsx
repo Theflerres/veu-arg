@@ -8,7 +8,8 @@ import { AMBAR, DISPLAY, HEX_CLIP, LABEL, VERDE, VERDE_DIM } from "./estilo";
 // Reinício (estilo modem caindo): SINAL INSTÁVEL, barras de sinal caindo,
 // LEDs hexagonais apagando um a um → tela preta (onApagado: o hub por baixo
 // remonta do zero) → REINICIANDO..., LEDs voltando → fade (onFim).
-// `atrasoMs` adia o começo, sem nada na tela; `onInicio` avisa o corte.
+// `atrasoMs` adia o começo, sem nada na tela; `onInicio` avisa o corte;
+// `onFase` avisa cada fase (o modo de inspeção troca o rosto da Bott por ela).
 
 const BLOCOS = "█▓▒░▚▞▙▟╳";
 
@@ -85,20 +86,24 @@ const T_FIM = 6500;
 const BARRAS = 5;
 const LEDS = 7;
 
+export type FaseReinicio = "sinal" | "preto" | "reiniciando";
+
 export function Reinicio({
   atrasoMs = 0,
   onInicio,
   onApagado,
   onFim,
+  onFase,
 }: {
   atrasoMs?: number;
   onInicio?: () => void;
   onApagado: () => void;
   onFim: () => void;
+  onFase?: (fase: FaseReinicio) => void;
 }) {
   const [t, setT] = useState(-1); // -1 = ainda no atraso
-  const cbs = useRef({ onInicio, onApagado, onFim });
-  cbs.current = { onInicio, onApagado, onFim };
+  const cbs = useRef({ onInicio, onApagado, onFim, onFase });
+  cbs.current = { onInicio, onApagado, onFim, onFase };
 
   useEffect(() => {
     let iv: ReturnType<typeof setInterval>;
@@ -126,10 +131,15 @@ export function Reinicio({
     };
   }, [atrasoMs]);
 
-  if (t < 0) return null;
-
   const preto = t >= T_PRETO && t < T_VOLTA;
   const voltando = t >= T_VOLTA;
+  const fase: FaseReinicio | null = t < 0 ? null : voltando ? "reiniciando" : preto ? "preto" : "sinal";
+  useEffect(() => {
+    if (fase) cbs.current.onFase?.(fase);
+  }, [fase]);
+
+  if (t < 0) return null;
+
   // Caindo: uma barra a cada 420ms (da mais alta); LEDs a cada 300ms a partir de 500ms.
   const barrasAcesas = voltando
     ? Math.min(BARRAS, Math.floor((t - T_VOLTA) / 380))

@@ -86,4 +86,17 @@ html,body{margin:0;height:100%;background:${FUNDO}}
 .bh-pular{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);font-family:${LABEL};font-size:10px;letter-spacing:.24em;color:rgba(0,255,102,.35);animation:bh-respira 2.4s ease-in-out infinite;z-index:3;white-space:nowrap}
 .bh-voltar{font-family:${LABEL};font-size:10px;letter-spacing:.18em;color:rgba(0,255,102,.3);background:none;border:none;padding:6px;cursor:pointer;text-decoration:none;transition:color .2s ease}
 .bh-voltar:hover,.bh-voltar:focus-visible{color:rgba(0,255,102,.75)}
+
+/* Modo de inspeção 3D (Inspecao.tsx): botão no cabeçalho, camada por cima da HUD */
+.bh-inspecionar{display:inline-flex;align-items:center;gap:7px;padding:4px 10px;border:1px solid rgba(255,210,63,.45);background:rgba(255,210,63,.06);color:#FFD23F;font-family:${LABEL};font-size:10px;letter-spacing:.22em;cursor:pointer;text-shadow:0 0 8px rgba(255,210,63,.4);transition:background .2s ease,border-color .2s ease}
+.bh-inspecionar:hover,.bh-inspecionar:focus-visible{background:rgba(255,210,63,.14);border-color:#FFD23F;outline:none}
+.bh-inspecionar-hex{width:8px;height:7px;background:#FFD23F;clip-path:${HEX_CLIP};box-shadow:0 0 6px #FFD23F}
+.bi-camada{position:fixed;inset:0;z-index:300;background:#0b0703}
+/* Com o modo aberto, a HUD fica parada por baixo: sem pintura das animações
+   escondidas, sem o grão (mix-blend sobre o WebGL custa a cada quadro) e com
+   as scanlines e o flicker parados (as linhas continuam visíveis). */
+.bh-raiz.bh-inspecionando{overflow:hidden}
+.bh-inspecionando .bh-conteudo,.bh-inspecionando .bh-topo,.bh-inspecionando .bh-favo,.bh-inspecionando .bh-brilho,.bh-inspecionando .bh-mel{visibility:hidden}
+.bh-inspecionando .bh-crt-grao{display:none}
+.bh-inspecionando .bh-crt-linhas,.bh-inspecionando .bh-crt-flicker{animation-play-state:paused}
 `;

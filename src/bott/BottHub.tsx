@@ -1,5 +1,18 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import {
+  Component,
+  Suspense,
+  lazy,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from "react";
+import { createPortal } from "react-dom";
 import { AbelhaPixel } from "../app/components/AbelhaPixel";
+import { CargaFavo } from "../inspect/carga";
 import {
   AJUSTES_ESTADO,
   CABECALHO,
@@ -45,7 +58,13 @@ import {
   type EstadoPensamento,
   type LinhaLog,
 } from "./paineis";
-import { Reinicio, Surto } from "./Reinicio";
+import { Reinicio, Surto, type FaseReinicio } from "./Reinicio";
+import { URL_MODELO, procuraModelo } from "./modelo";
+import { caixa, registraVaga, type IdPainel } from "./vitrine";
+
+// Modo de inspeção 3D: o pedaço com o viewer e o three.js só é baixado no
+// clique em INSPECIONAR (import dinâmico).
+const Inspecao = lazy(() => import("./Inspecao"));
 
 // ============================================================================
 // HUB DA BOTT
@@ -58,6 +77,11 @@ import { Reinicio, Surto } from "./Reinicio";
 //
 // Estado "contaram": a cada CICLO_REINICIO.intervaloMs, surto + reinício; o
 // reinício remonta o hub (key = ciclo) e o TEMPO LIGADA buga de novo.
+//
+// Modo de inspeção (INSPECIONAR, só se o modelo existir — ver modelo.ts):
+// camada por cima da HUD com a Bott 3D posando por abas. Os painéis não são
+// duplicados: a vitrine (vitrine.ts) move os da aba atual para a lateral do
+// modo e os devolve ao fechar. O estado do hub segue rodando por baixo.
 //
 // Sigla: por um instante, o trecho CABECALHO_PISCA do cabeçalho vira siglaB()
 // (SIGLA_PISCA_MS): em cada sobrescrita do P3, para quem está no nível 1 (ou
@@ -83,6 +107,56 @@ export function BottHub() {
   const [piscando, setPiscando] = useState(false);
   const [replaySigla, setReplaySigla] = useState(false);
 
+  // Modo de inspeção
+  const raizRef = useRef<HTMLDivElement>(null);
+  const [inspecao, setInspecao] = useState<{ url: string; primeiraVez: boolean } | null>(null);
+  const jaAbriu = useRef(false);
+  const rolagem = useRef(0);
+  const [sinais, setSinais] = useState<SinaisHub>({ escorregando: false, vaza: 0.2 });
+  const [cena99, setCena99] = useState(false);
+  const [faseReinicio, setFaseReinicio] = useState<FaseReinicio | null>(null);
+  const [chaveTempo, setChaveTempo] = useState(0);
+  // URL do modelo; vazia = sem botão INSPECIONAR. Em dev pode vir da página de teste.
+  const [urlModelo, setUrlModelo] = useState(URL_MODELO);
+  useEffect(() => {
+    if (URL_MODELO || !import.meta.env.DEV) return;
+    let vivo = true;
+    void procuraModelo().then((url) => vivo && setUrlModelo(url));
+    return () => {
+      vivo = false;
+    };
+  }, []);
+  const urlModeloRef = useRef(urlModelo);
+  urlModeloRef.current = urlModelo;
+
+  const abreInspecao = useCallback(() => {
+    const url = urlModeloRef.current;
+    if (!url) return;
+    // A HUD fica parada por baixo: guarda a rolagem e volta ao topo (o tremor
+    // da cena do 99% transforma o .bh-raiz, e a camada fixa seguiria a rolagem).
+    const raiz = raizRef.current;
+    rolagem.current = raiz?.scrollTop ?? 0;
+    if (raiz) raiz.scrollTop = 0;
+    setInspecao({ url, primeiraVez: !jaAbriu.current });
+    jaAbriu.current = true;
+  }, []);
+
+  const fechaInspecao = useCallback(() => {
+    setInspecao(null);
+    requestAnimationFrame(() => {
+      if (raizRef.current) raizRef.current.scrollTop = rolagem.current;
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!inspecao) return;
+    const aoTeclar = (e: KeyboardEvent) => {
+      if (e.key === "Escape") fechaInspecao();
+    };
+    window.addEventListener("keydown", aoTeclar);
+    return () => window.removeEventListener("keydown", aoTeclar);
+  }, [inspecao, fechaInspecao]);
+
   // Piscada da sigla: uma de cada vez; uma nova substitui a anterior.
   const piscaTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const piscaSigla = useCallback((ms: number) => {
@@ -98,8 +172,16 @@ export function BottHub() {
     registraTesteBott({
       sigla: () => setReplaySigla(true),
       piscaSigla: (ms?: number) => piscaSigla(ms ?? SIGLA_PISCA_MS.nivel2),
+      inspecao: () => {
+        if (!urlModeloRef.current) {
+          console.info("[bott] sem modelo 3D: coloque o arquivo em src/bott/assets/bott.gltf");
+          return;
+        }
+        setFase("hub");
+        abreInspecao();
+      },
     });
-  }, [piscaSigla]);
+  }, [piscaSigla, abreInspecao]);
 
   // O degrau da visita é decidido uma vez só (depois da hora confiável) e não
   // se repete quando o hub remonta no reinício.
@@ -113,24 +195,61 @@ export function BottHub() {
   const fimEntrada = useCallback(() => setFase("hub"), []);
 
   return (
-    <div className="bh-raiz">
+    <div ref={raizRef} className={`bh-raiz${inspecao ? " bh-inspecionando" : ""}`}>
       <style>{CSS}</style>
       <div className="bh-favo" />
       <div className="bh-brilho" />
 
       {fase === "hub" && (
-        <Hub key={ciclo} estado={estado} pegaDegrau={pegaDegrau} piscando={piscando} onPisca={piscaSigla} />
+        <Hub
+          key={ciclo}
+          estado={estado}
+          pegaDegrau={pegaDegrau}
+          piscando={piscando}
+          onPisca={piscaSigla}
+          onInspecionar={urlModelo ? abreInspecao : undefined}
+          chaveTempo={chaveTempo}
+          onSinais={setSinais}
+          onCena99={setCena99}
+        />
+      )}
+
+      {inspecao && fase === "hub" && (
+        <LimiteErro onVoltar={fechaInspecao}>
+          <Suspense
+            fallback={
+              <div className="bi-camada">
+                <CargaFavo progresso={null} rotulo="CARREGANDO INSPEÇÃO" />
+              </div>
+            }
+          >
+            <Inspecao
+              url={inspecao.url}
+              primeiraVez={inspecao.primeiraVez}
+              escorregando={sinais.escorregando}
+              vaza={sinais.vaza}
+              cena99={cena99}
+              faseReinicio={faseReinicio}
+              onVoltar={fechaInspecao}
+              onAbaPerfil={() => setChaveTempo((c) => c + 1)}
+            />
+          </Suspense>
+        </LimiteErro>
       )}
 
       {estado === "contaram" && fase === "hub" && !reiniciando && (
-        <CicloReinicio key={ciclo} onReiniciar={() => setReiniciando(true)} />
+        <CicloReinicio key={`ciclo-${ciclo}`} onReiniciar={() => setReiniciando(true)} />
       )}
       {reiniciando && (
         <Reinicio
           atrasoMs={CICLO_REINICIO.atrasoMs}
           onInicio={() => piscaSigla(SIGLA_PISCA_MS.reinicio)}
           onApagado={() => setCiclo((c) => c + 1)}
-          onFim={() => setReiniciando(false)}
+          onFim={() => {
+            setReiniciando(false);
+            setFaseReinicio(null);
+          }}
+          onFase={setFaseReinicio}
         />
       )}
 
@@ -143,6 +262,42 @@ export function BottHub() {
       <div className="bh-crt-flicker" />
     </div>
   );
+}
+
+// ── Modo de inspeção: sinais do hub, falha ao baixar ────────────────────────
+
+/** O que o Hub conta para o modo de inspeção (rosto da Bott e o vazamento âmbar). */
+export interface SinaisHub {
+  /** Pensamento escorregando (nível 1 em diante), até a sobrescrita do P3. */
+  escorregando: boolean;
+  vaza: number;
+}
+
+/** Falha ao baixar o pedaço do inspetor (rede): mensagem curta, a HUD fica intacta. */
+class LimiteErro extends Component<{ onVoltar: () => void; children: ReactNode }, { falhou: boolean }> {
+  state = { falhou: false };
+  static getDerivedStateFromError() {
+    return { falhou: true };
+  }
+  render() {
+    if (!this.state.falhou) return this.props.children;
+    return (
+      <div className="bi-camada">
+        <div className="iv-centro" role="alert">
+          <span>MODO 3D INDISPONÍVEL AGORA</span>
+          <button type="button" className="bh-inspecionar" style={{ pointerEvents: "auto" }} onClick={this.props.onVoltar}>
+            VOLTAR
+          </button>
+        </div>
+      </div>
+    );
+  }
+}
+
+/** Vaga de um painel na HUD (a caixa dele mora aqui quando não está emprestada). */
+function Vaga({ id }: { id: IdPainel }) {
+  const ref = useCallback((el: HTMLDivElement | null) => registraVaga(id, el), [id]);
+  return <div ref={ref} style={{ display: "contents" }} />;
 }
 
 // ── Estado "contaram": surto → reinício ─────────────────────────────────────
@@ -173,11 +328,19 @@ function Hub({
   pegaDegrau,
   piscando,
   onPisca,
+  onInspecionar,
+  chaveTempo,
+  onSinais,
+  onCena99,
 }: {
   estado: EstadoMundo;
   pegaDegrau: () => SlotId | null;
   piscando: boolean;
   onPisca: (ms: number) => void;
+  onInspecionar?: () => void;
+  chaveTempo: number;
+  onSinais: (s: SinaisHub) => void;
+  onCena99: (ativa: boolean) => void;
 }) {
   const aj = AJUSTES_ESTADO[estado];
   const onPiscaRef = useRef(onPisca);
@@ -195,6 +358,8 @@ function Hub({
   const [falhando, setFalhando] = useState(-1);
   const [camadaFinal, setCamadaFinal] = useState(false);
   const [, setRelogio] = useState(0);
+  /** Nível do visitante no deslize em curso (o rosto do modo de inspeção só muda do nível 1 em diante). */
+  const nivelDeslize = useRef(0);
 
   // Pensamentos e deslizes
   useEffect(() => {
@@ -213,6 +378,7 @@ function Hub({
     const digitar = (texto: string) => texto.length * RITMO.digitaMs + 300;
 
     const deslize = async (texto: string, degrau: SlotId | null) => {
+      nivelDeslize.current = Math.max(leNivel(), degrau ? DEGRAUS.indexOf(degrau) + 1 : 0);
       setPens({ texto, tom: "ambar", sobrescrevendo: false, n: ++n });
       setDeslizando(true);
       await espera(digitar(texto) + RITMO.deslizeMs);
@@ -314,6 +480,11 @@ function Hub({
   // Quanto o âmbar vaza por baixo do verde.
   const vaza = deslizando ? 0.45 : falaEscorrega ? 0.38 : estado === "nao-contaram" ? 0.38 : leNivel() > 0 ? 0.28 : 0.2;
 
+  const escorregando = deslizando && !pens.sobrescrevendo && nivelDeslize.current >= 1;
+  useEffect(() => {
+    onSinais({ escorregando, vaza });
+  }, [escorregando, vaza, onSinais]);
+
   return (
     <div style={{ ["--vaza" as string]: vaza } as CSSProperties}>
       <div className="bh-mel" />
@@ -331,35 +502,65 @@ function Hub({
           />
         </span>
         <span style={{ flex: 1 }} />
-        <Controle instavel={deslizando} faixaMs={aj.controleMs} />
+        {onInspecionar && (
+          <button type="button" className="bh-inspecionar" onClick={onInspecionar}>
+            <span className="bh-inspecionar-hex" aria-hidden="true" />
+            INSPECIONAR
+          </button>
+        )}
+        <Vaga id="controle" />
       </header>
+
+      {/* Cada painel é renderizado uma vez, na caixa dele (vitrine.ts); as
+          vagas abaixo dizem onde a caixa fica na HUD. */}
+      {createPortal(<Controle instavel={deslizando} faixaMs={aj.controleMs} />, caixa("controle"))}
+      {createPortal(
+        <Painel titulo="TEMPO LIGADA" className="bh-c5" falhando={falhando === 0}>
+          <TempoLigada key={chaveTempo} />
+        </Painel>,
+        caixa("tempo")
+      )}
+      {createPortal(
+        <Painel titulo="ÚLTIMA FALA" escorrega={falaEscorrega} falhando={falhando === 1} atraso={80}>
+          <UltimaFala chanceCorte={aj.chanceCorte} onCorte={onCorte} onEscorrega={setFalaEscorrega} />
+        </Painel>,
+        caixa("fala")
+      )}
+      {createPortal(
+        <Painel titulo="PENSAMENTO ATUAL" escorrega={deslizando} falhando={falhando === 2} atraso={160}>
+          <Pensamento p={pens} />
+        </Painel>,
+        caixa("pensamento")
+      )}
+      {createPortal(
+        <Painel titulo="CHECKLIST" className="bh-c6" falhando={falhando === 3} atraso={240}>
+          <Checklist />
+        </Painel>,
+        caixa("checklist")
+      )}
+      {createPortal(
+        <Painel titulo="DIAGNÓSTICO" className="bh-c6" falhando={falhando === 4} atraso={320}>
+          <Diagnostico desligamentos={DIAGNOSTICO.desligamentos} onCena99={onCena99} />
+        </Painel>,
+        caixa("diagnostico")
+      )}
+      {createPortal(
+        <Painel titulo="LOG" className="bh-c12" falhando={falhando === 5} atraso={400}>
+          <Log linhas={linhas} />
+        </Painel>,
+        caixa("log")
+      )}
 
       <main className="bh-conteudo">
         <div className="bh-grade">
-          <Painel titulo="TEMPO LIGADA" className="bh-c5" falhando={falhando === 0}>
-            <TempoLigada />
-          </Painel>
-
+          <Vaga id="tempo" />
           <div className="bh-c7 bh-pilha">
-            <Painel titulo="ÚLTIMA FALA" escorrega={falaEscorrega} falhando={falhando === 1} atraso={80}>
-              <UltimaFala chanceCorte={aj.chanceCorte} onCorte={onCorte} onEscorrega={setFalaEscorrega} />
-            </Painel>
-            <Painel titulo="PENSAMENTO ATUAL" escorrega={deslizando} falhando={falhando === 2} atraso={160}>
-              <Pensamento p={pens} />
-            </Painel>
+            <Vaga id="fala" />
+            <Vaga id="pensamento" />
           </div>
-
-          <Painel titulo="CHECKLIST" className="bh-c6" falhando={falhando === 3} atraso={240}>
-            <Checklist />
-          </Painel>
-
-          <Painel titulo="DIAGNÓSTICO" className="bh-c6" falhando={falhando === 4} atraso={320}>
-            <Diagnostico desligamentos={DIAGNOSTICO.desligamentos} />
-          </Painel>
-
-          <Painel titulo="LOG" className="bh-c12" falhando={falhando === 5} atraso={400}>
-            <Log linhas={linhas} />
-          </Painel>
+          <Vaga id="checklist" />
+          <Vaga id="diagnostico" />
+          <Vaga id="log" />
         </div>
 
         <footer style={{ display: "flex", alignItems: "center", gap: 14, marginTop: 26 }}>

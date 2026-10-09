@@ -8,7 +8,7 @@ import "../styles/fonts.css";
 if (import.meta.env.DEV) {
   registraTesteBott();
   console.info(
-    "%c[bott] testeBott: abrirHub() · abelha() · chat(n) · nivel(n) · estado(e) · zerar() · sigla() · piscaSigla(ms?) · noventaENove()",
+    "%c[bott] testeBott: abrirHub() · abelha() · chat(n) · nivel(n) · estado(e) · zerar() · sigla() · piscaSigla(ms?) · noventaENove() · inspecao()",
     "color:#FFB000"
   );
 }

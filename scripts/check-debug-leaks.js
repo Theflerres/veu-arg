@@ -16,13 +16,17 @@ import { join, relative, extname, resolve } from "node:path";
 const DIST = resolve(process.argv[2] ?? "dist");
 
 // Parâmetros de URL que ligam algo especial no countdown/site.
-const PARAMS = ["debug", "fase", "final", "codigo", "marco", "resetmarcos", "travar", "egg"];
+const PARAMS = ["debug", "fase", "final", "codigo", "marco", "resetmarcos", "travar", "egg", "editor"];
 
 // Ocorrências conhecidas e inofensivas, de código de terceiros. São apagadas
 // do texto antes da varredura. Mantenha esta lista o mais curta possível:
 // cada entrada é um ponto cego.
 const PERMITIDOS = [
   /useDebugValue/g, // hook do próprio React, presente em todo bundle de produção
+  // three.js (modo de inspeção do hub): API pública do WebGLRenderer,
+  // renderer.debug.checkShaderErrors / renderer.debug.onShaderError.
+  /\.debug(?=\.(?:checkShaderErrors|onShaderError)\b)/g,
+  /\.debug=\{checkShaderErrors\b/g,
 ];
 
 const PADROES = [
@@ -34,13 +38,15 @@ const PADROES = [
   { nome: "testarBloqueio()", re: /testarBloqueio/ },
   { nome: "window.testeInterceptacao", re: /testeInterceptacao/ },
   // Hub da Bott (src/app/bott-teste.ts): atalhos e chaves de teste.
-  // window.testeBott inclui abrirHub, abelha, chat(n), nivel, estado, zerar, sigla, piscaSigla, noventaENove.
+  // window.testeBott inclui abrirHub, abelha, chat(n), nivel, estado, zerar, sigla, piscaSigla, noventaENove, inspecao.
   { nome: "window.testeBott", re: /testeBott/ },
   { nome: "aviso de testeBott.chat", re: /o chat só abre no site principal/ },
   { nome: "aviso de testeBott.chat (abelha)", re: /a abelha está na vez/ },
   { nome: "aviso de testeBott.sigla/piscaSigla", re: /a sigla só aparece no hub/ },
   { nome: "testeBott.noventaENove", re: /noventaENove/ },
   { nome: "aviso de testeBott.noventaENove", re: /a barra só existe no hub/ },
+  { nome: "aviso de testeBott.inspecao", re: /o modo de inspe\S+ s\S+ existe no hub/ },
+  { nome: "aviso de testeBott.inspecao (sem modelo)", re: /sem modelo 3D: coloque/ },
   { nome: "chave veu-bott-teto-teste", re: /teto-teste/ },
   { nome: "chave veu-bott-estado-teste", re: /estado-teste/ },
   { nome: "chave veu-bott-forca-nivel", re: /forca-nivel/ },
@@ -57,6 +63,12 @@ const PADROES = [
   })),
   // Source map anularia a minificação (ver build.sourcemap no vite.config.ts)
   { nome: "sourceMappingURL", re: /sourceMappingURL=/ },
+  // Página de teste da inspeção 3D (inspect/index.html): só em DEV. O viewer
+  // e o three.js vão ao ar no modo de inspeção do hub (pedaço baixado sob
+  // demanda); a página de teste e o editor, não.
+  { nome: "marca inspecao-teste", re: /inspecao-teste/ },
+  // Editor de poses da inspeção (src/inspect/EditorPoses.tsx, ?editor=1): só em DEV.
+  { nome: "marca editor-poses-teste", re: /editor-poses-teste/ },
 ];
 
 // Termos que não podem existir em lugar nenhum do repositório — nem aqui,
@@ -114,6 +126,9 @@ for (const arq of todos) {
   if (extname(arq) === ".map") {
     vazamentos.push({ padrao: "arquivo .map", arquivo: rel, contexto: "source map publicado junto do build" });
     continue;
+  }
+  if (relative(DIST, arq).replaceAll("\\", "/").startsWith("inspect/")) {
+    vazamentos.push({ padrao: "página inspect/", arquivo: rel, contexto: "página de inspeção publicada no build" });
   }
   if (!EXTENSOES.has(extname(arq))) continue;
 

@@ -2,7 +2,7 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { resolve } from "node:path";
 
-export default defineConfig({
+export default defineConfig(({ command }) => ({
   plugins: [react()],
   base: "/veu-arg/",
   build: {
@@ -20,7 +20,13 @@ export default defineConfig({
         timer: resolve(__dirname, "timer/index.html"),
         // Hub da Bott: página React própria (src/bott/), em <base>/bott/.
         bott: resolve(__dirname, "bott/index.html"),
+        // Página de TESTE da inspeção 3D (inspect/, editor de poses): só no
+        // `npm run dev` (aqui ela serve para o Vite pré-empacotar o three.js).
+        // No build fica de fora; o viewer vai ao ar só pelo modo de inspeção
+        // do hub, num pedaço baixado sob demanda. scripts/check-debug-leaks.js
+        // derruba o build se a página de teste ou o editor vazarem.
+        ...(command === "serve" ? { inspect: resolve(__dirname, "inspect/index.html") } : {}),
       },
     },
   },
-});
+}));

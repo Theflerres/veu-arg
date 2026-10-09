@@ -4,6 +4,12 @@ dist
 *.local
 Countdownlive/
 CIFRAS.md
-
+src/inspect/assets/
 # Áudios originais (sem cifra) — nunca versionar: o repositório é público
 audio-original/
+
+# Prints de referência visual (inspeção 3D) — só locais
+refs/
+
+# Modelo 3D do modo de inspeção do hub — publicar só com git add -f
+src/bott/assets/*.gltf
