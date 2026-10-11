@@ -3,20 +3,35 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches: ["main"]
+  # Liberação dos sinais do rádio: todo dia às 00:10 em Brasília (03:10 UTC),
+  # com uma reserva às 09:10 (12:10 UTC) caso a primeira atrase ou falhe.
+  schedule:
+    - cron: "10 3 * * *"
+    - cron: "10 12 * * *"
   workflow_dispatch:
+    inputs:
+      data_simulada:
+        description: "Só para TESTE (AAAA-MM-DD): decifra e faz o build como se fosse essa data, mas NÃO publica nada. Deixe vazio para publicar de verdade."
+        required: false
+        default: ""
 
 permissions:
   contents: read
   pages: write
   id-token: write
 
+# O teste com data simulada tem fila própria: não cancela nem é cancelado por
+# uma publicação de verdade.
 concurrency:
-  group: "pages"
+  group: ${{ github.event.inputs.data_simulada != '' && 'teste-radio' || 'pages' }}
   cancel-in-progress: true
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      # Vazio em push e schedule; preenchido só no teste manual.
+      DATA_SIMULADA: ${{ github.event.inputs.data_simulada }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -30,23 +45,43 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # Decifra para public/sounds/radio/ só os sinais cuja data (America/
+      # Sao_Paulo) já chegou. A chave vem do Secret, entra por variável de
+      # ambiente (o GitHub a mascara nos logs) e o script não imprime nada dela
+      # nem dos arquivos. Sem o Secret, avisa e segue sem decifrar.
+      - name: Liberar sinais do rádio
+        env:
+          RADIO_KEY: ${{ secrets.RADIO_KEY }}
+        run: node scripts/liberar-sinais.mjs
+
       # build + scripts/check-debug-leaks.js: se algo de debug escapar pro
-      # dist/, o job falha aqui e o deploy não acontece.
+      # dist/ (ou um sinal antes da data), o job falha aqui e o deploy não acontece.
       - name: Build (com checagem de vazamento de debug)
         run: npm run build:check
 
+      # Teste com data simulada: nada é empacotado nem publicado (o artefato
+      # do Pages fica baixável por qualquer pessoa logada no GitHub, então nem
+      # ele é gerado).
       - name: Setup Pages
+        if: env.DATA_SIMULADA == ''
         uses: actions/configure-pages@v5
         with:
           enablement: true
 
       - name: Upload artifact
+        if: env.DATA_SIMULADA == ''
         uses: actions/upload-pages-artifact@v3
         with:
           path: "./dist"
 
+      - name: Teste com data simulada — nada publicado
+        if: env.DATA_SIMULADA != ''
+        run: echo "::notice::Teste com DATA_SIMULADA=$DATA_SIMULADA concluído. Deploy pulado de propósito."
+
   deploy:
     needs: build
+    # Só publica em push, schedule ou workflow_dispatch SEM data_simulada.
+    if: github.event_name != 'workflow_dispatch' || github.event.inputs.data_simulada == ''
     runs-on: ubuntu-latest
     environment:
       name: github-pages

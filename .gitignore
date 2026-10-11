@@ -8,6 +8,13 @@ src/inspect/assets/
 # Áudios originais (sem cifra) — nunca versionar: o repositório é público
 audio-original/
 
+# Material de produção de áudio (scripts, textos, gravações) — só local
+producao-sinais/
+
+# Sinais 2 a 5 do rádio: no repositório só existem cifrados (radio-cifrado/);
+# o mp3 decifrado é criado pelo workflow, dentro do runner, no dia certo
+public/sounds/radio/sinal-[2-5].mp3
+
 # Prints de referência visual (inspeção 3D) — só locais
 refs/
 

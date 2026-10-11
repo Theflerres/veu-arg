@@ -264,12 +264,189 @@ export function playJingle(volume = 0.4) {
   }
 }
 
+// ── EFEITOS (public/sounds/fx/) ─────────────────────────────────────────────
+// Cada toque cria a própria instância (createMediaElementSource e o fade não
+// disputam elemento com ninguém). Arquivo ausente ou som barrado = mudo, e a
+// promessa resolve na hora: quem espera o fim de um efeito nunca trava.
+// No máximo FX_MAX_SIMULTANEOS ao mesmo tempo: o mais antigo sai para o novo
+// entrar. stopAllAudio() para todos; a Interceptação pausa e retoma.
+
+export const FX_FILES = {
+  emp: "fx-emp.mp3",
+  zumbido: "fx-zumbido.mp3",
+  motor: "fx-motor.mp3", // loop
+  "sonar-ping": "fx-sonar-ping.mp3",
+  "sonar-varios": "fx-sonar-varios.mp3", // loop
+  "glitch-1": "fx-glitch-1.mp3",
+  "glitch-2": "fx-glitch-2.mp3",
+  "estatica-1": "fx-estatica-1.mp3", // curta
+  "estatica-2": "fx-estatica-2.mp3", // cama, loop
+  "estatica-3": "fx-estatica-3.mp3", // sintonia
+} as const;
+
+export type FxNome = keyof typeof FX_FILES;
+
+export const FX_VOLUME_EMP = 0.85;
+export const FX_VOLUME_ZUMBIDO = 0.5;
+export const FX_VOLUME_MOTOR = 0.4;
+export const FX_VOLUME_SONAR_PING = 0.5;
+export const FX_VOLUME_SONAR_VARIOS = 0.35;
+export const FX_VOLUME_GLITCH = 0.5;
+export const FX_VOLUME_ESTATICA = 0.4;
+export const FX_MAX_SIMULTANEOS = 2;
+
+const FX_VOLUME: Record<FxNome, number> = {
+  emp: FX_VOLUME_EMP,
+  zumbido: FX_VOLUME_ZUMBIDO,
+  motor: FX_VOLUME_MOTOR,
+  "sonar-ping": FX_VOLUME_SONAR_PING,
+  "sonar-varios": FX_VOLUME_SONAR_VARIOS,
+  "glitch-1": FX_VOLUME_GLITCH,
+  "glitch-2": FX_VOLUME_GLITCH,
+  "estatica-1": FX_VOLUME_ESTATICA,
+  "estatica-2": FX_VOLUME_ESTATICA,
+  "estatica-3": FX_VOLUME_ESTATICA,
+};
+
+interface FxVivo {
+  el: HTMLAudioElement;
+  inicio: number;
+  rampa: ReturnType<typeof setInterval> | null;
+  acaba: () => void;
+}
+const fxVivos = new Map<FxNome, FxVivo>();
+
+export function fxUrl(nome: FxNome): string {
+  return `${BASE}sounds/fx/${FX_FILES[nome]}`;
+}
+
+/** Leva o volume até `alvo` em `ms`; com `para`, encerra o efeito no fim. */
+function rampaFx(vivo: FxVivo, alvo: number, ms: number, para: boolean) {
+  if (vivo.rampa) clearInterval(vivo.rampa);
+  const de = vivo.el.volume;
+  const t0 = performance.now();
+  vivo.rampa = setInterval(() => {
+    const q = Math.min(1, (performance.now() - t0) / Math.max(1, ms));
+    try {
+      vivo.el.volume = Math.max(0, Math.min(1, de + (alvo - de) * q));
+    } catch {
+      /* ignore */
+    }
+    if (q < 1) return;
+    if (vivo.rampa) clearInterval(vivo.rampa);
+    vivo.rampa = null;
+    if (para) {
+      try {
+        vivo.el.pause();
+      } catch {
+        /* ignore */
+      }
+      vivo.acaba();
+    }
+  }, 50);
+}
+
+/**
+ * Toca um efeito. Resolve quando ele termina, é parado ou não consegue tocar.
+ * `rampaAteZeroMs`: o volume cai até zero nesse tempo (e o efeito encerra).
+ */
+export function tocaFx(
+  nome: FxNome,
+  op: { volume?: number; loop?: boolean; rampaAteZeroMs?: number } = {}
+): Promise<void> {
+  paraFx(nome);
+  const outros = [...fxVivos.entries()].sort((a, b) => a[1].inicio - b[1].inicio);
+  while (outros.length >= FX_MAX_SIMULTANEOS) paraFx(outros.shift()![0]);
+
+  return new Promise((resolve) => {
+    let el: HTMLAudioElement;
+    try {
+      el = new Audio(fxUrl(nome));
+    } catch {
+      resolve();
+      return;
+    }
+    el.volume = op.volume ?? FX_VOLUME[nome];
+    el.loop = !!op.loop;
+    let feito = false;
+    const vivo: FxVivo = {
+      el,
+      inicio: performance.now(),
+      rampa: null,
+      acaba: () => {
+        if (feito) return;
+        feito = true;
+        if (vivo.rampa) clearInterval(vivo.rampa);
+        if (fxVivos.get(nome) === vivo) fxVivos.delete(nome);
+        resolve();
+      },
+    };
+    fxVivos.set(nome, vivo);
+    el.addEventListener("ended", vivo.acaba, { once: true });
+    el.addEventListener("error", vivo.acaba, { once: true });
+    void el.play().then(
+      () => {
+        if (op.rampaAteZeroMs) rampaFx(vivo, 0, op.rampaAteZeroMs, true);
+      },
+      () => vivo.acaba() // ausente ou barrado: mudo
+    );
+  });
+}
+
+/** Para um efeito, na hora ou com fade de `fadeMs`. */
+export function paraFx(nome: FxNome, fadeMs = 0) {
+  const vivo = fxVivos.get(nome);
+  if (!vivo) return;
+  if (fadeMs > 0) {
+    rampaFx(vivo, 0, fadeMs, true);
+    return;
+  }
+  try {
+    vivo.el.pause();
+    vivo.el.currentTime = 0;
+  } catch {
+    /* ignore */
+  }
+  vivo.acaba();
+}
+
+export function paraTodosFx() {
+  for (const nome of [...fxVivos.keys()]) paraFx(nome);
+}
+
+// Glitch: alterna os dois arquivos, nunca o mesmo duas vezes seguidas.
+let ultimoGlitch: FxNome | null = null;
+export function tocaFxGlitch(): Promise<void> {
+  const nome: FxNome =
+    ultimoGlitch === "glitch-1" ? "glitch-2" : ultimoGlitch === "glitch-2" ? "glitch-1" : Math.random() < 0.5 ? "glitch-1" : "glitch-2";
+  ultimoGlitch = nome;
+  return tocaFx(nome);
+}
+
+// Atalho de teste — só em `npm run dev`: testeFx.tocar("emp"), testeFx.parar()
+export function registraTesteFx() {
+  if (import.meta.env.DEV) {
+    (window as unknown as { testeFx: unknown }).testeFx = {
+      tocar: (nome: string) => {
+        if (!(nome in FX_FILES)) {
+          console.warn(`[fx] testeFx.tocar: use ${Object.keys(FX_FILES).join(", ")}`);
+          return;
+        }
+        void tocaFx(nome as FxNome, { loop: nome === "motor" || nome === "sonar-varios" || nome === "estatica-2" });
+      },
+      parar: paraTodosFx,
+    };
+    console.info("%c[fx] testeFx: tocar(nome) · parar()", "color:#00FF66");
+  }
+}
+
 // ── SILÊNCIO TOTAL ──────────────────────────────────────────────────────────
 // Para tudo que estiver tocando: música ambiente, jingles soltos, loop de
-// glitch e qualquer efeito em cache. Usado ao entrar na tela de um Grupo.
+// glitch, efeitos e qualquer som em cache. Usado ao entrar na tela de um Grupo.
 
 export function stopAllAudio() {
   stopBackgroundMusic();
+  paraTodosFx();
   stopGlitchSound();
   stopHeartbeat();
   stopHunterWest();
@@ -334,6 +511,7 @@ export function pausaAudioDoSite(): () => void {
       p3Sophia.el,
       ...cache.values(),
       ...looseSounds,
+      ...[...fxVivos.values()].map((v) => v.el),
     ].filter((a): a is HTMLAudioElement => a !== null);
 
   const pausados = vigentes().filter((a) => !a.paused && !a.ended);

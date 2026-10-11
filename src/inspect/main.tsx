@@ -1,9 +1,12 @@
-import { lazy } from "react";
+import { lazy, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
 import { InspectViewer } from "./InspectViewer";
 import type { ConfigPoses } from "./poser";
 import { ABAS, GRUPO_OBJETOS, GRUPO_ROSTO, GRUPOS_PES, NOS_GRUPO, OBJETOS, RESPIRACAO, ROSTOS } from "./poses";
 import "../styles/fonts.css";
+import { registraTesteApagao } from "../app/apagao";
+import { useApagao } from "../app/useApagao";
+import { ApagaoScreen } from "../app/components/ApagaoScreen";
 
 // Página de TESTE da inspeção 3D (inspect/index.html) — só existe em
 // `npm run dev`; a entrada não vai para o build (ver vite.config.ts).
@@ -35,7 +38,18 @@ const EditorPoses =
     ? lazy(() => import("./EditorPoses"))
     : undefined;
 
+registraTesteApagao();
+
+// Apagão vale aqui também (testeApagao.desligar() para trabalhar nas poses).
+function RaizInspecao({ children }: { children: ReactNode }) {
+  const apagao = useApagao();
+  if (apagao === "sim") return <ApagaoScreen />;
+  if (apagao === "conferindo") return null;
+  return <>{children}</>;
+}
+
 createRoot(document.getElementById("root")!).render(
+  <RaizInspecao>
   <InspectViewer
     url={urlModelo}
     abas={ABAS}
@@ -46,4 +60,5 @@ createRoot(document.getElementById("root")!).render(
       poses: POSES,
     }}
   />
+  </RaizInspecao>
 );

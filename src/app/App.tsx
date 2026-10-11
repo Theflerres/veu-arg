@@ -28,6 +28,8 @@ import {
 } from "./components/Interceptacao";
 import { AbelhaRara, sinalizaAbelha } from "./components/AbelhaRara";
 import { marcaGatilhoNivel3 } from "./bott-progresso";
+import { ApagaoScreen } from "./components/ApagaoScreen";
+import { useApagao } from "./useApagao";
 
 const NEON = "#00FF66";
 const NEON_MID = "#2BEA7B";
@@ -1271,6 +1273,8 @@ type Screen = "password" | "main" | "melting" | "closed";
 export default function App() {
   const [screen, setScreen] = useState<Screen>("password");
   const interceptando = useInterceptacaoAberta();
+  // Apagão (apagao.ts): o site inteiro fica fora do ar, menos o countdown e o ?eco=.
+  const apagao = useApagao();
 
   // Tela de reconhecimento (?eco=…). Com o parâmetro na URL, o site espera o
   // hash ser conferido antes de montar qualquer coisa — senão a tela de senha
@@ -1295,22 +1299,33 @@ export default function App() {
   }, []);
 
   // Interceptação: nunca por cima da senha do terminal (nem do derretimento
-  // que vem depois dela). O terminal sinaliza as próprias navegações.
-  useTravaInterceptacao(eco === "fechado" && screen !== "main");
+  // que vem depois dela), e pausada durante o apagão. O terminal sinaliza as
+  // próprias navegações.
+  useTravaInterceptacao((eco === "fechado" && screen !== "main") || apagao !== "nao");
   useEffect(() => {
-    if (eco !== "conferindo" && screen !== "main") sinalizaNavegacao();
-  }, [eco, screen]);
+    if (apagao === "nao" && eco !== "conferindo" && screen !== "main") sinalizaNavegacao();
+  }, [apagao, eco, screen]);
   const fecharInterceptacao = useCallback(() => {
     fechaInterceptacao();
     playBack();
   }, []);
-  const interceptacao = interceptando && <InterceptacaoOverlay onClose={fecharInterceptacao} />;
+  const interceptacao = interceptando && apagao === "nao" && <InterceptacaoOverlay onClose={fecharInterceptacao} />;
 
   if (eco !== "fechado") {
     return (
       <div style={{ width: "100vw", height: "100vh", overflow: "hidden", background: "#000" }}>
         {eco !== "conferindo" && <EcoScreen chave={eco} onClose={fecharEco} />}
         {interceptacao}
+      </div>
+    );
+  }
+
+  // Apagão: nada do site monta (terminal, música, chat, abelha). "conferindo"
+  // = tela preta até a hora do servidor chegar (ver useApagao).
+  if (apagao !== "nao") {
+    return (
+      <div style={{ width: "100vw", height: "100vh", overflow: "hidden", background: "#000" }}>
+        {apagao === "sim" && <ApagaoScreen />}
       </div>
     );
   }

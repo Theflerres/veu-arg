@@ -6,7 +6,7 @@ import {
   charParaMorse,
   textoParaMorse,
 } from "../interceptacao-data";
-import { pausaAudioDoSite, playGlitchOnce } from "../sounds";
+import { pausaAudioDoSite, tocaFxGlitch } from "../sounds";
 
 // ============================================================================
 // INTERCEPTAÇÃO AUSTIN → HUNTER — evento raro, site-wide
@@ -228,7 +228,7 @@ export function InterceptacaoOverlay({ onClose }: { onClose: () => void }) {
   // Silêncio no site enquanto estiver aberta; retoma ao fechar.
   useEffect(() => {
     const retoma = pausaAudioDoSite();
-    void playGlitchOnce();
+    void tocaFxGlitch(); // alterna fx-glitch-1 / fx-glitch-2
     return retoma;
   }, []);
 

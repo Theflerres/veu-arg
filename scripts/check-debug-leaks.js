@@ -11,7 +11,8 @@
 // Uso: node scripts/check-debug-leaks.js [pasta]   (padrão: dist)
 
 import { readdirSync, readFileSync, statSync, existsSync } from "node:fs";
-import { join, relative, extname, resolve } from "node:path";
+import { join, relative, extname, resolve, basename } from "node:path";
+import { hojeSP, situacao } from "./sinais-radio.mjs";
 
 const DIST = resolve(process.argv[2] ?? "dist");
 
@@ -51,6 +52,17 @@ const PADROES = [
   { nome: "chave veu-bott-estado-teste", re: /estado-teste/ },
   { nome: "chave veu-bott-forca-nivel", re: /forca-nivel/ },
   { nome: "marcador [TEXTO A ENVIAR]", re: /TEXTO A ENVIAR/ },
+  // Rádio do countdown (timer/radio.js): atalhos tocar(n), liberarTodos(), zerar()
+  // e a chave que ignora as datas de liberação.
+  { nome: "window.testeRadio", re: /testeRadio/ },
+  { nome: "chave veu-radio-libera-teste", re: /libera-teste/ },
+  { nome: "testeRadio.liberarTodos", re: /liberarTodos/ },
+  // Apagão (src/app/apagao.ts): atalhos ligar(), desligar(), zerar() e a chave
+  // de teste que força ligado/desligado.
+  { nome: "window.testeApagao", re: /testeApagao/ },
+  { nome: "chave veu-apagao-forca", re: /apagao-forca/ },
+  // Efeitos sonoros (src/app/sounds.ts e timer/radio.js): testeFx.tocar(nome), parar().
+  { nome: "window.testeFx", re: /testeFx/ },
   // Termos que não podem ir ao ar de jeito nenhum (o Ç pode sair escapado no JS)
   { nome: "Dott", re: /Dott/ },
   { nome: "TRAÇA", re: /TRA(?:Ç|\\u00c7|\\xc7|&#199;|&Ccedil;)A/i },
@@ -144,6 +156,26 @@ for (const arq of todos) {
     for (const m of normalizado.matchAll(re)) {
       vazamentos.push({ padrao: nome, arquivo: rel, contexto: trecho(normalizado, m.index, m[0].length) });
     }
+  }
+}
+
+// Sinais do rádio (radio-cifrado/datas.json): no dist só podem estar os já
+// liberados na data de hoje em America/Sao_Paulo (ou DATA_SIMULADA, no teste
+// do workflow). Os blobs cifrados (sN.bin) nunca vão para o dist.
+const { data: hojeRadio } = hojeSP();
+for (const { n, data } of situacao(hojeRadio).bloqueados) {
+  const arq = join(DIST, "sounds", "radio", `sinal-${n}.mp3`);
+  if (existsSync(arq)) {
+    vazamentos.push({
+      padrao: `sinal ${n} antes da data`,
+      arquivo: relative(process.cwd(), arq).replaceAll("\\", "/"),
+      contexto: `liberado só em ${data} (hoje: ${hojeRadio})`,
+    });
+  }
+}
+for (const arq of todos) {
+  if (/^s\d+\.bin$/.test(basename(arq))) {
+    vazamentos.push({ padrao: "blob cifrado do rádio", arquivo: relative(process.cwd(), arq).replaceAll("\\", "/"), contexto: "radio-cifrado/ não vai para o site" });
   }
 }
 

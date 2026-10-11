@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { FX_VOLUME_SONAR_VARIOS, FX_VOLUME_ZUMBIDO, paraFx, tocaFx } from "../app/sounds";
 import { AMBAR, DISPLAY, HEX_CLIP, LABEL, VERDE, VERDE_DIM } from "./estilo";
 
 // ============================================================================
@@ -136,7 +137,22 @@ export function Reinicio({
   const fase: FaseReinicio | null = t < 0 ? null : voltando ? "reiniciando" : preto ? "preto" : "sinal";
   useEffect(() => {
     if (fase) cbs.current.onFase?.(fase);
+    // Som: zumbido caindo de volume no SINAL INSTÁVEL; sonar em loop no REINICIANDO.
+    if (fase === "sinal") void tocaFx("zumbido", { volume: FX_VOLUME_ZUMBIDO, rampaAteZeroMs: T_PRETO });
+    else if (fase === "preto") paraFx("zumbido");
+    else if (fase === "reiniciando") void tocaFx("sonar-varios", { volume: FX_VOLUME_SONAR_VARIOS, loop: true });
   }, [fase]);
+  const sumindo = t >= T_FADE;
+  useEffect(() => {
+    if (sumindo) paraFx("sonar-varios", T_FIM - T_FADE);
+  }, [sumindo]);
+  useEffect(
+    () => () => {
+      paraFx("zumbido");
+      paraFx("sonar-varios");
+    },
+    []
+  );
 
   if (t < 0) return null;
 

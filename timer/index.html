@@ -672,6 +672,108 @@
     #p3-lock .p3l-dialogo{ font-size:16px; }
     #p3l-wave{ height:110px; }
   }
+
+  /* ---------- Rádio: sinais captados durante o countdown ----------
+     Canto inferior direito, acima do rodapé. Abaixo das camadas de CRT
+     (z 49-51) de propósito: as scanlines passam por cima dele também. */
+  #radio{
+    position:fixed; right:40px; bottom:58px; z-index:40;
+    display:flex; flex-direction:column; align-items:flex-end; gap:8px;
+    font-family:var(--font-ui);
+    pointer-events:none;
+  }
+  #radio[hidden]{ display:none; }
+  #radio > *{ pointer-events:auto; }
+  #radio-sinal{
+    display:flex; align-items:center; gap:10px;
+    font-size:11px; letter-spacing:2px;
+    color:var(--phosphor-dim);
+    opacity:0;
+    transition:opacity 0.9s ease;
+    pointer-events:none;
+  }
+  #radio-sinal.ativo{ opacity:0.85; }
+  #radio-sinal.tocando #radio-sinal-txt{
+    color:var(--phosphor);
+    text-shadow:0 0 6px rgba(51,255,102,0.35);
+  }
+  #radio-onda{ width:84px; height:16px; display:block; opacity:0.7; }
+  #radio-icone{
+    width:26px; height:26px; padding:4px;
+    display:flex; align-items:center; justify-content:center;
+    background:transparent; border:none; cursor:pointer;
+    opacity:0.2;
+    transition:opacity 0.35s ease, filter 0.35s ease;
+  }
+  #radio-icone:hover,
+  #radio-icone:focus-visible,
+  #radio-icone[aria-expanded="true"]{
+    outline:none;
+    opacity:0.8;
+    filter:drop-shadow(0 0 5px rgba(51,255,102,0.6));
+  }
+  #radio-ativar,
+  #radio-painel button{
+    font-family:inherit; font-size:11px; letter-spacing:1.5px;
+    background:rgba(2,5,3,0.95);
+    cursor:pointer;
+  }
+  #radio-ativar{
+    color:var(--amber);
+    border:1px solid rgba(255,176,0,0.35);
+    padding:6px 12px;
+  }
+  #radio-ativar[hidden], #radio-painel[hidden], #radio-vazio[hidden]{ display:none; }
+  #radio-painel{
+    width:220px; padding:10px 12px;
+    background:rgba(2,5,3,0.94);
+    border:1px solid rgba(51,255,102,0.22);
+    font-size:11px; letter-spacing:1px;
+    color:var(--phosphor);
+  }
+  #radio-painel .radio-titulo{
+    font-size:10px; letter-spacing:2px;
+    color:var(--phosphor-dim);
+    margin-bottom:8px;
+  }
+  #radio-lista{ list-style:none; }
+  #radio-lista li{
+    display:flex; justify-content:space-between; align-items:center;
+    padding:3px 0;
+  }
+  #radio-vazio{ color:var(--phosphor-dim); padding:3px 0; }
+  #radio-painel button{
+    color:var(--phosphor);
+    border:1px solid var(--phosphor-faint);
+    padding:3px 8px;
+  }
+  #radio-painel button:hover:not(:disabled),
+  #radio-painel button:focus-visible{
+    outline:none;
+    border-color:var(--phosphor-dim);
+    background:rgba(51,255,102,0.1);
+  }
+  #radio-painel button:disabled{ color:var(--phosphor-dim); cursor:default; }
+  #radio-painel #radio-sintonizar{ display:block; width:100%; margin-top:10px; padding:6px 8px; }
+  #radio-msg{ min-height:1.4em; margin-top:6px; color:var(--phosphor-dim); text-align:center; }
+
+  /* ---------- Volta para a tela de apagão ----------
+     Seta discreta no canto superior esquerdo, acima do cabeçalho. Só aparece
+     com o apagão no ar, fora do iframe do site e fora do OBS. */
+  #volta-apagao{
+    position:fixed; top:6px; left:12px; z-index:40;
+    padding:2px 6px;
+    font-family:var(--font-display); font-size:14px; line-height:1;
+    color:var(--phosphor); text-decoration:none;
+    opacity:0.28;
+    transition:opacity 0.3s ease, text-shadow 0.3s ease;
+  }
+  #volta-apagao[hidden]{ display:none; }
+  #volta-apagao:hover,
+  #volta-apagao:focus-visible{
+    outline:none; opacity:0.9;
+    text-shadow:0 0 8px rgba(51,255,102,0.6);
+  }
 </style>
 </head>
 <body>
@@ -713,6 +815,34 @@
       </div>
     </div>
 
+    <a id="volta-apagao" href="../" aria-label="Voltar" title="Voltar" hidden>&#9668;</a>
+
+    <!-- rádio: indicador de sinal, aviso de autoplay e painel de sinais
+         (timer/radio.js); fica escondido até o countdown estar no ar -->
+    <div id="radio" hidden>
+      <div id="radio-sinal" aria-hidden="true">
+        <span id="radio-sinal-txt">SINAL ░░░</span>
+        <canvas id="radio-onda"></canvas>
+      </div>
+      <button id="radio-ativar" type="button" hidden>clique para ativar o rádio</button>
+      <div id="radio-painel" hidden>
+        <div class="radio-titulo">&gt;&gt; SINAIS</div>
+        <ul id="radio-lista"></ul>
+        <div id="radio-vazio">nenhum sinal captado</div>
+        <button id="radio-sintonizar" type="button">SINTONIZAR</button>
+        <div id="radio-msg" aria-live="polite"></div>
+      </div>
+      <button id="radio-icone" type="button" aria-label="Rádio" aria-expanded="false">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#33ff66"
+             stroke-width="1.8" stroke-linecap="square" aria-hidden="true">
+          <rect x="3" y="9" width="18" height="12" />
+          <path d="M7 9l10-6" />
+          <circle cx="15.5" cy="15" r="2.5" />
+          <path d="M6.5 13h3M6.5 17h3" />
+        </svg>
+      </button>
+    </div>
+
     <!-- log do invasor + banner final; vazios até a sequência final começar -->
     <div id="invasion-layer">
       <div id="invasion-log"></div>
@@ -752,6 +882,9 @@
   </div>
 
 <script type="module">
+import { iniciaRadio } from './radio.js';
+import { apagaoNoAr, ouveApagao, registraTesteApagao } from '../src/app/apagao.ts';
+
 /* ==========================================================================
    RELÓGIO CONFIÁVEL
    Nada nesta página pergunta "que horas são" ao Date.now(): o relógio do
@@ -2288,6 +2421,8 @@ function startEnding(){
   endingState.started = true;
   endingState.armed = true;
   state.current = 'ending';        // cala eventos e o glitch de idle
+  radio.corta();                   // sinal no ar sai junto
+  voltaApagao.hidden = true;
 
   clearInterval(countdownInterval);
   clearInterval(idlePhraseTimer);
@@ -2864,6 +2999,7 @@ const marcoState = {
   vistos: new Set(lerMarcosVistos()),   // também em memória: sem localStorage, ao menos não repete nesta carga
   pendente: null,                       // marco cruzado esperando o idle
   forcado: null,                        // ?marco=… (ignora e não grava o registro)
+  noAr: false,                          // painel de marco na tela agora (o rádio não começa por cima)
 };
 
 function marcaVisto(id){
@@ -2890,6 +3026,8 @@ function avaliaMarcos(){
 }
 
 function vigiaMarcos(){
+  if (state.current !== 'event_lore') marcoState.noAr = false;
+
   // Sem horário verificado (ou com a tela do P3 no ar) nada é avaliado: um
   // relógio adiantado marcaria como vistos marcos que ainda nem chegaram.
   if (!relogio.liberado) return;
@@ -2904,6 +3042,8 @@ function vigiaMarcos(){
   avaliaMarcos();
 
   if (state.current !== 'idle') return;
+  // Sinal de rádio chiando/tocando: o marco segue pendente e entra depois.
+  if (radio.ocupado()) return;
 
   const marco = marcoState.forcado || marcoState.pendente;
   if (marco){
@@ -2916,6 +3056,7 @@ function vigiaMarcos(){
     const folga = CONFIG.eventVisibleDuration + ((CONFIG.marcos || {}).margemColapsoMs || 3000);
     if (!forcado) marcaVisto(marco.id);
     if (restante > folga){
+      marcoState.noAr = true;
       showContentEvent('event_lore', { tag: 'MARCO', body: marco.t });
       return;
     }
@@ -3162,21 +3303,55 @@ window.addEventListener('message', (e) => {
   if (tipo === 'pausarAudio'){
     if (pausaExterna.em) return;
     pausaExterna.em = performance.now();
-    pausaExterna.midias = [P3_AUDIO.el, ...document.querySelectorAll('audio, video')]
+    pausaExterna.midias = [P3_AUDIO.el, radio.audio(), ...document.querySelectorAll('audio, video')]
       .filter(m => m && !m.paused && !m.ended && !m.muted);
     pausaExterna.midias.forEach(m => { try { m.pause(); } catch (err){} });
+    radio.pausa();
   } else if (tipo === 'retomarAudio'){
     if (!pausaExterna.em) return;
     p3.inicio += performance.now() - pausaExterna.em; // relógio sem áudio também não anda
     pausaExterna.em = 0;
     for (const m of pausaExterna.midias){
       // o que foi parado/trocado nesse meio-tempo continua parado
-      const vigente = m === P3_AUDIO.el || m.isConnected;
+      const vigente = m === P3_AUDIO.el || m === radio.audio() || m.isConnected;
       if (vigente && m.paused && m.currentTime > 0) m.play().catch(() => {});
     }
     pausaExterna.midias = [];
+    radio.retoma();
   }
 });
+
+/* ---------- Rádio ----------
+   Sinais captados durante o countdown (timer/radio.js, números em
+   timer/radio-config.js). O countdown só diz quando dá: o rádio existe fora
+   do boot, antes do final e sem a tela do P3; um sinal automático só começa
+   no idle; nenhum começa por cima de um marco, da fala do P3 ou com o áudio
+   pausado pelo site. */
+const radio = iniciaRadio({
+  agora,
+  horaConfiavel: () => relogio.sincronizado && relogio.liberado,
+  restanteMs: () => CONFIG.targetDate.getTime() - agora(),
+  noAr: () => state.current !== 'boot' && state.current !== 'ending' &&
+    !endingState.armed && relogio.liberado && p3.tela.hidden,
+  ocioso: () => state.current === 'idle',
+  ocupado: () => (marcoState.noAr && state.current === 'event_lore') ||
+    !!(P3_AUDIO.el && !P3_AUDIO.el.paused),
+  pausado: () => !!pausaExterna.em,
+});
+
+/* ---------- Volta para a tela de apagão ----------
+   Com o apagão no ar (src/app/apagao.ts), o resto do site vira a tela de
+   apagão e o countdown é a única página aberta: a seta "◄" leva de volta a
+   ela. Escondida dentro do iframe do site (o overlay tem o próprio VOLTAR),
+   no OBS, sem horário verificado e da sequência final em diante. */
+const voltaApagao = document.getElementById('volta-apagao');
+function confereVoltaApagao(){
+  voltaApagao.hidden = !(relogio.liberado && !endingState.armed &&
+    window.parent === window && !window.obsstudio && apagaoNoAr(agora()));
+}
+setInterval(confereVoltaApagao, 10000);
+ouveApagao(confereVoltaApagao);
+registraTesteApagao();   // só em dev
 
 /* ---------- Onda de voz ----------
    Com analyser: barras = espectro real (graves no centro, espelhado).
@@ -3374,6 +3549,7 @@ function p3Dialogo(sessao){
 /* ---------- Abrir / fechar ---------- */
 function bloqueia(){
   relogio.liberado = false;
+  radio.corta();
   if (!p3.tela.hidden) return;
   clearInterval(countdownInterval);          // nada anda atrás da tela
 
@@ -3403,6 +3579,7 @@ function libera(){
   }
   relogio.liberado = true;
   zeraVigia();
+  confereVoltaApagao();
   // depois do zero quem manda é a sequência final: não religa o relógio por cima
   if (!endingState.armed) startCountdownClock();
 }

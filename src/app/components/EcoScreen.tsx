@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { abreP3Sophia, playP3Sophia, p3SophiaTempo, stopP3Sophia } from "../sounds";
+import { desenhaOnda, novaOnda, ondaFala, pesoDoChar } from "./onda-voz";
 
 // ============================================================================
 // ECO — tela de reconhecimento pessoal
@@ -11,8 +12,9 @@ import { abreP3Sophia, playP3Sophia, p3SophiaTempo, stopP3Sophia } from "../soun
 // Mesma família da tela do P3 de relógio manipulado (countdown), em tom calmo:
 // só verde, sem glitch, entrada e saída por fade. Começa por um clique (ver
 // EcoScreen), para o navegador deixar a voz tocar. A onda reaproveita a lógica
-// do countdown — espectro real via AnalyserNode quando o áudio toca, fala
-// simulada (sílabas puxadas pela digitação) se mesmo assim ele não tocar.
+// do countdown (onda-voz.ts, compartilhada com a tela de apagão) — espectro
+// real via AnalyserNode quando o áudio toca, fala simulada (sílabas puxadas
+// pela digitação) se mesmo assim ele não tocar.
 
 const NEON = "#00FF66";
 const NEON_DIM = "rgba(0,255,102,0.45)";
@@ -127,14 +129,6 @@ const RESPIRO_S = 1.5;
 const FADE_ENTRADA_MS = 1400;
 const FADE_SAIDA_MS = 600;
 
-// Mesmo peso da tela de timeout: pontuação "pesa" mais, como pausa de respiração.
-function pesoDoChar(ch: string): number {
-  if (ch === "." || ch === "?" || ch === "!") return 7;
-  if (ch === "," || ch === "—") return 5;
-  if (ch === " ") return 1.4;
-  return 1;
-}
-
 // Decifra as frases e marca o horário (s) de cada caractere; o peso de um
 // caractere é a pausa DEPOIS dele, e o último cai exatamente no fim da janela
 // da frase.
@@ -154,102 +148,6 @@ function montaFala(chave: string): Frase[] {
 }
 
 const BOTAO_EM_S = P3_SOPHIA_FALA.duracaoTotal + RESPIRO_S;
-
-// ── Onda de voz ─────────────────────────────────────────────────────────────
-
-const ONDA_BARRAS = 48;
-
-interface Onda {
-  barras: Float32Array;
-  fase: number[];
-  vel: number[];
-  analyser: AnalyserNode | null;
-  dados: Uint8Array | null;
-  falando: boolean;
-  energia: number;
-  silaba: number;
-  proxSilaba: number;
-}
-
-function novaOnda(): Onda {
-  return {
-    barras: new Float32Array(ONDA_BARRAS),
-    fase: Array.from({ length: ONDA_BARRAS }, () => Math.random() * Math.PI * 2),
-    vel: Array.from({ length: ONDA_BARRAS }, () => 5 + Math.random() * 9),
-    analyser: null,
-    dados: null,
-    falando: false,
-    energia: 0,
-    silaba: 0,
-    proxSilaba: 0,
-  };
-}
-
-// Chamado a cada caractere digitado: é o que dá ritmo de fala à simulação.
-function ondaFala(onda: Onda, ch: string) {
-  const t = performance.now();
-  if (/[.,;:!?…—]/.test(ch)) onda.silaba = 0.04; // respiração
-  else if (ch === " ") onda.silaba *= 0.35; // fim de palavra
-  else if (t >= onda.proxSilaba) {
-    onda.silaba = 0.45 + Math.random() * 0.55;
-    onda.proxSilaba = t + 70 + Math.random() * 120;
-  }
-}
-
-function desenhaOnda(cv: HTMLCanvasElement, onda: Onda) {
-  const dpr = window.devicePixelRatio || 1;
-  const w = cv.clientWidth;
-  const h = cv.clientHeight;
-  if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) {
-    cv.width = Math.round(w * dpr);
-    cv.height = Math.round(h * dpr);
-  }
-  const g = cv.getContext("2d");
-  if (!g) return;
-  g.setTransform(dpr, 0, 0, dpr, 0, 0);
-  g.clearRect(0, 0, w, h);
-
-  const t = performance.now() / 1000;
-  const c = (ONDA_BARRAS - 1) / 2;
-  if (onda.analyser) {
-    if (!onda.dados) onda.dados = new Uint8Array(onda.analyser.frequencyBinCount);
-    onda.analyser.getByteFrequencyData(onda.dados);
-  } else {
-    onda.energia += ((onda.falando ? 1 : 0.07) - onda.energia) * 0.08;
-    onda.silaba *= 0.94;
-  }
-
-  for (let i = 0; i < ONDA_BARRAS; i++) {
-    const k = Math.abs(i - c) / c; // 0 no centro, 1 nas pontas
-    const repouso = 0.025 + 0.015 * Math.sin(t * 2 + i * 0.35);
-    let alvo: number;
-    if (onda.analyser && onda.dados) {
-      const v = onda.dados[1 + Math.floor(k * 44)] / 255;
-      alvo = Math.max(repouso, Math.pow(v, 1.3));
-    } else {
-      const envelope = 0.2 + 0.8 * Math.exp(-Math.pow(k * 1.6, 2));
-      const ruido = 0.6 * (0.5 + 0.5 * Math.sin(t * onda.vel[i] + onda.fase[i])) + 0.4 * Math.random();
-      const nivel = onda.energia * (0.2 + 0.8 * onda.silaba);
-      alvo = Math.max(repouso, nivel * envelope * ruido);
-    }
-    const b = onda.barras[i];
-    onda.barras[i] = b + (alvo - b) * (alvo > b ? 0.5 : 0.16);
-  }
-
-  g.fillStyle = "rgba(0,255,102,0.14)";
-  g.fillRect(0, Math.round(h / 2), w, 1);
-
-  const passo = w / ONDA_BARRAS;
-  const larg = Math.max(2, passo * 0.55);
-  g.fillStyle = NEON;
-  g.shadowColor = "rgba(0,255,102,0.5)";
-  g.shadowBlur = 10;
-  for (let i = 0; i < ONDA_BARRAS; i++) {
-    const alt = Math.max(2, Math.min(1, onda.barras[i]) * h * 0.92);
-    g.fillRect(i * passo + (passo - larg) / 2, (h - alt) / 2, larg, alt);
-  }
-  g.shadowBlur = 0;
-}
 
 // ── Tela ────────────────────────────────────────────────────────────────────
 // Duas etapas: "porta" (tela preta, só o convite para clicar) e "fala". O

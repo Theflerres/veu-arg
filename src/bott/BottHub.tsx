@@ -44,6 +44,7 @@ import {
 } from "../app/bott-progresso";
 import { registraTesteBott } from "../app/bott-teste";
 import { agora, horaSP, sincronizaHora } from "../app/hora-confiavel";
+import { tocaFxGlitch } from "../app/sounds";
 import { Entrada } from "./Entrada";
 import { CSS, AMBAR, DISPLAY, LABEL, VERDE, VERDE_APAGADO } from "./estilo";
 import {
@@ -384,6 +385,7 @@ function Hub({
       await espera(digitar(texto) + RITMO.deslizeMs);
       if (!vivo) return;
       setPens((p) => ({ ...p, sobrescrevendo: true }));
+      void tocaFxGlitch();
       onPiscaRef.current(piscaDaSobrescrita(degrau));
       await espera(RITMO.sobrescritaMs);
       if (!vivo) return;

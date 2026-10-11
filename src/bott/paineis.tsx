@@ -25,7 +25,7 @@ import {
   registraCena99,
 } from "../app/bott-progresso";
 import { registraTesteBott } from "../app/bott-teste";
-import { playBottVermelho } from "../app/sounds";
+import { playBottVermelho, tocaFxGlitch } from "../app/sounds";
 import { AMBAR, DISPLAY, HEX_CLIP, LABEL, VERDE, VERDE_APAGADO, VERDE_DIM, VERDE_MID, VERMELHO } from "./estilo";
 
 // Painéis do hub. Cada um cuida da própria animação; o que depende de evento
@@ -541,6 +541,7 @@ export function BarraProgressoB({ onCena }: { onCena?: (ativa: boolean) => void 
     setTentando(true);
     em(CENA_TENTA_MS, () => setTentando(false));
     em(CENA_GLITCH_EM, () => {
+      void tocaFxGlitch();
       painel?.classList.add("bh-glitch-forte");
       tela?.classList.add("bh-tremor");
     });
