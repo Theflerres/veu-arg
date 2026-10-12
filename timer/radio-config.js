@@ -51,6 +51,25 @@ export const FX_VOLUME_SINTONIA = 0.4;
 export const FX_VOLUME_PING = 0.5;
 export const FX_MAX_SIMULTANEOS = 2;
 
+// ---- Músicas (public/sounds/) ----
+// De vez em quando o rádio "pega" uma música: primeiro a estática
+// (fx-estatica-1), depois a música, com o indicador SINAL e a onda. Mesmas
+// regras de cena dos sinais (só com o countdown no idle; pausa junto com o
+// site; a tela do P3 e o final cortam). Não entra no painel de sinais, não
+// conta como sinal ouvido e não segura os marcos (pode tocar com texto na tela).
+// ganhoDb compensa o volume de cada arquivo, bem mais baixo que o dos sinais
+// (medido: musicbox1 média -41 dB, musicbox2 -31 dB; sinais ~-23 dB). O ganho
+// só vale com a Web Audio ligada; sem ela, fica só MUSICA_VOLUME.
+export const MUSICAS = [
+  { id: 'm1', arquivo: 'musicbox1.mp3', ganhoDb: 15 },
+  { id: 'm2', arquivo: 'musicbox2.mp3', ganhoDb: 5 },
+];
+export const MUSICA_CHANCE = 0.08;                   // por tentativa do sorteio (~a cada 45 s)
+export const MUSICA_COOLDOWN_MS = 12 * 60 * 1000;    // entre o início de duas músicas
+export const MUSICA_VOLUME = 0.8;
+// Nenhuma música COMEÇA com menos que isto até o zero (a musicbox2 tem ~10 min).
+export const MUSICA_CORTE_FINAL_MS = 30 * 60 * 1000;
+
 // Nenhum sinal COMEÇA com menos que isto até o zero: a tela e o som têm que
 // estar livres para o marco de 10 min e para a sequência final.
 export const RADIO_CORTE_FINAL_MS = 15 * 60 * 1000;

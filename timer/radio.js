@@ -18,6 +18,7 @@ import {
   SINTONIA_CHANCE, SINTONIA_COOLDOWN_MS, RADIO_VOLUME, ESTATICA_VOLUME,
   ESTATICA_MS, RADIO_CORTE_FINAL_MS, RADIO_NO_OBS,
   FX_VOLUME_ESTATICA_SINAL, FX_VOLUME_CAMA, FX_VOLUME_SINTONIA, FX_VOLUME_PING, FX_MAX_SIMULTANEOS,
+  MUSICAS, MUSICA_CHANCE, MUSICA_COOLDOWN_MS, MUSICA_VOLUME, MUSICA_CORTE_FINAL_MS,
 } from './radio-config.js';
 
 const FX = {
@@ -31,7 +32,11 @@ const CHAVE = {
   ouvidos: 'veu-radio-ouvidos',
   ultimo: 'veu-radio-ultimo',
   sintonia: 'veu-radio-sintonia',
+  musica: 'veu-radio-musica',              // agora() do início da última música
+  musicaUltima: 'veu-radio-musica-ultima', // id dela (a próxima é a outra)
 };
+
+const ehMusica = (x) => !!x && MUSICAS.includes(x);
 
 // Depois de qualquer reprodução, o sorteio automático espera este tanto antes
 // de tentar de novo: sem isso um sinal novo poderia emendar num "reouvir".
@@ -88,6 +93,7 @@ export function iniciaRadio(host){
     analyser: null,
     dados: null,
     fonte: null,
+    ganho: null,          // GainNode da vez (ganho próprio das músicas)
     ctxPausado: false,
     fimEm: -Infinity,     // performance.now() do fim da última reprodução
     proximoSorteio: performance.now() + intervalo(),
@@ -242,8 +248,12 @@ export function iniciaRadio(host){
     if (r.fonte || !r.ctx || r.ctx.state !== 'running' || r.el !== audio) return;
     try {
       r.fonte = r.ctx.createMediaElementSource(audio);
-      r.fonte.connect(r.analyser);
-    } catch (e){ r.fonte = null; }
+      // ganho próprio da música (os arquivos são mais baixos que os sinais)
+      r.ganho = r.ctx.createGain();
+      r.ganho.gain.value = ehMusica(r.sinal) ? Math.pow(10, (r.sinal.ganhoDb || 0) / 20) : 1;
+      r.fonte.connect(r.ganho);
+      r.ganho.connect(r.analyser);
+    } catch (e){ r.fonte = null; r.ganho = null; }
   }
 
   /* ---------- Efeitos de arquivo (public/sounds/fx/) ----------
@@ -344,7 +354,7 @@ export function iniciaRadio(host){
     r.fonte = null;
     const audio = new Audio(urlDe(sinal));
     audio.preload = 'auto';
-    audio.volume = RADIO_VOLUME;
+    audio.volume = ehMusica(sinal) ? MUSICA_VOLUME : RADIO_VOLUME;
     r.el = audio;
     audio.addEventListener('ended', () => termina(sessao));
     audio.addEventListener('error', () => {
@@ -357,7 +367,8 @@ export function iniciaRadio(host){
     if (novo) void tocaFx('sonar-ping', FX_VOLUME_PING);   // sinal novo captado
     await somLiberado();                                   // contexto da onda
     if (sessao !== r.sessao) return;
-    if (!(await chiadoAntes(novo ? ESTATICA_MS : ESTATICA_MS / 2, sessao))) return;
+    // estática primeiro (cheia para sinal novo e música; metade para reouvir), depois o áudio
+    if (!(await chiadoAntes(novo || ehMusica(sinal) ? ESTATICA_MS : ESTATICA_MS / 2, sessao))) return;
     if (sessao !== r.sessao) return;
     toca(sessao);
   }
@@ -385,7 +396,12 @@ export function iniciaRadio(host){
     r.fase = 'tocando';
     ui.sinal.classList.add('tocando');
     paraFx('estatica-1', 500);
-    void tocaFx('estatica-2', FX_VOLUME_CAMA, true);         // cama sob a voz
+    if (ehMusica(r.sinal)){
+      grava(CHAVE.musica, host.agora());
+      grava(CHAVE.musicaUltima, r.sinal.id);
+    } else {
+      void tocaFx('estatica-2', FX_VOLUME_CAMA, true);       // cama sob a voz
+    }
     if (r.novo) marcaOuvido(r.sinal);
     desenhaPainel();
   }
@@ -429,7 +445,9 @@ export function iniciaRadio(host){
     const audio = r.el;
     if (audio){ try { audio.pause(); } catch (e){} }
     try { if (r.fonte) r.fonte.disconnect(); } catch (e){}
+    try { if (r.ganho) r.ganho.disconnect(); } catch (e){}
     r.fonte = null;
+    r.ganho = null;
     r.el = null;
     r.sinal = null;
     r.fimEm = performance.now();
@@ -510,7 +528,7 @@ export function iniciaRadio(host){
   function desenhaPainel(){
     const lista = ouvidos();
     const livre = r.fase === 'livre';
-    ui.lista.replaceChildren(...lista.map((id, i) => {
+    const itens = lista.map((id, i) => {
       const li = document.createElement('li');
       const rot = document.createElement('span');
       rot.textContent = 'SINAL ' + (i + 1);
@@ -522,8 +540,21 @@ export function iniciaRadio(host){
       bt.addEventListener('click', () => (esteTocando ? corta() : reouvir(id)));
       li.append(rot, bt);
       return li;
-    }));
-    ui.vazio.hidden = lista.length > 0;
+    });
+    // música no ar: uma linha só para poder parar (some quando ela acaba)
+    if (!livre && r.fase !== 'saindo' && ehMusica(r.sinal)){
+      const li = document.createElement('li');
+      const rot = document.createElement('span');
+      rot.textContent = 'TRANSMISSÃO';
+      const bt = document.createElement('button');
+      bt.type = 'button';
+      bt.textContent = 'PARAR';
+      bt.addEventListener('click', () => corta());
+      li.append(rot, bt);
+      itens.unshift(li);
+    }
+    ui.lista.replaceChildren(...itens);
+    ui.vazio.hidden = itens.length > 0;
     atualizaSintonizar();
   }
 
@@ -604,14 +635,41 @@ export function iniciaRadio(host){
   }
 
   async function sorteioAutomatico(){
-    if (emCooldown(CHAVE.ultimo, RADIO_COOLDOWN_MS)) return;
+    if (await tentaSinal()) return;
+    await tentaMusica();
+  }
+
+  async function tentaSinal(){
+    if (emCooldown(CHAVE.ultimo, RADIO_COOLDOWN_MS)) return false;
     const ja = new Set(ouvidos());
-    if (SINAIS.every(s => ja.has(s.id))) return;   // ouviu tudo: só o painel
-    if (Math.random() >= RADIO_CHANCE) return;
+    if (SINAIS.every(s => ja.has(s.id))) return false;   // ouviu tudo: só o painel
+    if (Math.random() >= RADIO_CHANCE) return false;
     const sinal = await escolhe();
     // a espera do HEAD pode ter mudado a cena
-    if (!sinal || !cenaLivre()) return;
+    if (!sinal || !cenaLivre()) return false;
     capta(sinal, true);
+    return true;
+  }
+
+  /* Música: chance e cooldown próprios; alterna entre as duas (a última
+     tocada fica para depois). Arquivo ausente = ignorado, como nos sinais. */
+  async function tentaMusica(){
+    if (!MUSICAS.length || emCooldown(CHAVE.musica, MUSICA_COOLDOWN_MS)) return false;
+    if (host.restanteMs() <= MUSICA_CORTE_FINAL_MS) return false;
+    if (Math.random() >= MUSICA_CHANCE) return false;
+    const musica = await escolheMusica();
+    if (!musica || !cenaLivre()) return false;
+    capta(musica, false);
+    return true;
+  }
+
+  async function escolheMusica(){
+    const ultima = lerJSON(CHAVE.musicaUltima, null);
+    const presentes = (await Promise.all(MUSICAS.map(m => existe(m).then(ok => (ok ? m : null))))).filter(Boolean);
+    if (!presentes.length) return null;
+    const outras = presentes.filter(m => m.id !== ultima);
+    const pool = outras.length ? outras : presentes;
+    return pool[Math.floor(Math.random() * pool.length)];
   }
 
   // Ícone e painel só existem com o rádio no ar.
@@ -650,6 +708,13 @@ export function iniciaRadio(host){
         corta();
         capta(sinal, true);
       },
+      musica(n){
+        const m = MUSICAS[n - 1];
+        if (!m){ console.warn('[radio] testeRadio.musica: use 1 a ' + MUSICAS.length); return; }
+        if (!host.noAr()){ console.warn('[radio] testeRadio.musica: o rádio não está no ar (boot, tela do P3 ou final)'); return; }
+        corta();
+        capta(m, false);
+      },
       liberarTodos(){
         r.liberaTodos = true;
         try { localStorage.setItem('veu-radio-libera-teste', '1'); } catch (e){}
@@ -687,7 +752,8 @@ export function iniciaRadio(host){
     // tela do P3 / sequência final: corta e já tira o ícone, sem esperar o vigia
     corta(){ corta(); confereNoAr(); },
     // chiando ou tocando: o marco espera (o aviso de clique não segura nada)
-    ocupado: () => r.fase === 'sintonizando' || r.fase === 'tocando',
+    // música não segura o marco: os dois podem dividir a tela
+    ocupado: () => (r.fase === 'sintonizando' || r.fase === 'tocando') && !ehMusica(r.sinal),
     audio: () => r.el,
     // pausarAudio/retomarAudio do site: o <audio> é pausado pelo listener do
     // countdown; aqui só congela o chiado em curso
