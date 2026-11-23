@@ -16,7 +16,11 @@ export default defineConfig(({ command }) => ({
       // fica em public/ — para que os blocos `import.meta.env.DEV` dele sejam
       // removidos do build como os do site.
       input: {
+        // Raiz: Sistema Schrödinger (src/schrodinger/). Antes da DATA_TRANSICAO
+        // (parte2/secoes.json) ela monta o mesmo App do P3, sem mudar a URL.
         main: resolve(__dirname, "index.html"),
+        // P3: o site original (src/main.tsx → App.tsx), intacto, em <base>/p3/.
+        p3: resolve(__dirname, "p3/index.html"),
         timer: resolve(__dirname, "timer/index.html"),
         // Hub da Bott: página React própria (src/bott/), em <base>/bott/.
         bott: resolve(__dirname, "bott/index.html"),

@@ -1,28 +1,33 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pt-BR">
   <head>
-
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Véu // Terminal de Acesso</title>
-    <meta name="description" content="Um terminal de acesso restrito. Poucos registros foram liberados até agora." />
+    <title>Sistema Schrödinger</title>
+    <meta name="description" content="Acesso restrito. A caixa só abre quando alguém observa." />
     <meta name="robots" content="noindex, nofollow" />
+    <meta name="theme-color" content="#F6F9FC" />
 
-    <meta property="og:title" content="Véu // Terminal de Acesso" />
-    <meta property="og:description" content="Um terminal de acesso restrito. Poucos registros foram liberados até agora." />
+    <link rel="icon" type="image/png" sizes="32x32" href="/schrodinger/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/schrodinger/favicon-16.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/schrodinger/apple-touch-icon-180.png" />
+
+    <meta property="og:title" content="Sistema Schrödinger" />
+    <meta property="og:description" content="Acesso restrito. A caixa só abre quando alguém observa." />
     <meta property="og:type" content="website" />
+    <meta property="og:locale" content="pt_BR" />
     <meta property="og:url" content="https://theflerres.github.io/veu-arg/" />
+    <meta property="og:image" content="https://theflerres.github.io/veu-arg/schrodinger/og-1200x630.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Logo do Sistema Schrödinger" />
+    <meta name="twitter:card" content="summary_large_image" />
 
-    <meta name="twitter:card" content="summary" />
-
-    <style>html, body { height: 100%; margin: 0; } #root { height: 100%; }</style>
-
+    <!-- fundo neutro até a raiz decidir entre o P3 e o Schrödinger (src/schrodinger/main.ts) -->
+    <style>html, body { height: 100%; margin: 0; background: #000; } #root { min-height: 100%; }</style>
   </head>
-
   <body>
-
     <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-
+    <script type="module" src="/src/schrodinger/main.ts"></script>
   </body>
 </html>
