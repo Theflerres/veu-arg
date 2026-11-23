@@ -1,0 +1,76 @@
+{
+  "_leia": "Datas de abertura do Sistema Schrödinger (fuso America/Sao_Paulo, ISO com -03:00). Sem títulos: o conteúdo de cada seção fica no blob cifrado (parte2-cifrado/) ou, na fase A, em parte2/claro/. Ver scripts/parte2.mjs.",
+  "fuso": "America/Sao_Paulo",
+  "transicao": "2026-11-23T20:00:00-03:00",
+  "secoes": [
+    {
+      "id": "00",
+      "fase": "A",
+      "abre": "2026-11-23T20:00:00-03:00",
+      "modelo": "livre",
+      "fonte": "claro"
+    },
+    {
+      "id": "01",
+      "fase": "A",
+      "abre": "2026-11-23T20:00:00-03:00",
+      "modelo": "data",
+      "fonte": "claro"
+    },
+    {
+      "id": "02",
+      "fase": "B",
+      "abre": "2027-01-01T20:00:00-03:00",
+      "modelo": "data",
+      "blob": "e37287427b1b.bin",
+      "contagem": true
+    },
+    {
+      "id": "03",
+      "fase": "B",
+      "abre": "2027-01-01T20:00:00-03:00",
+      "modelo": "data",
+      "blob": "5f15b6330873.bin",
+      "contagem": true
+    },
+    {
+      "id": "04",
+      "fase": "B",
+      "abre": "2027-01-01T20:00:00-03:00",
+      "modelo": "data+resposta",
+      "blob": "df8b269ea45c.bin",
+      "contagem": true
+    },
+    {
+      "id": "05",
+      "fase": "A",
+      "abre": "2026-11-23T20:00:00-03:00",
+      "modelo": "data",
+      "fonte": "claro"
+    },
+    {
+      "id": "05.1",
+      "pai": "05",
+      "fase": "B",
+      "abre": "2027-01-01T20:00:00-03:00",
+      "modelo": "data",
+      "blob": "780f0fdc2ccd.bin"
+    },
+    {
+      "id": "06",
+      "fase": "C",
+      "abre": "2027-01-01T20:00:00-03:00",
+      "modelo": "data",
+      "blob": "d7ab1e9c97dc.bin",
+      "contagem": false
+    },
+    {
+      "id": "06.1",
+      "pai": "06",
+      "fase": "C",
+      "abre": "2027-01-02T20:00:00-03:00",
+      "modelo": "data",
+      "blob": "4f99c4ca6d1b.bin"
+    }
+  ]
+}

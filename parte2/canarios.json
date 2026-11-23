@@ -1,0 +1,12 @@
+{
+  "_leia": "Uma marca aleatória por seção. Ela vai dentro do texto da seção (campo canario); se a marca de uma seção ainda fechada aparecer no dist/, scripts/check-debug-leaks.js derruba o deploy. Este arquivo NÃO é importado pelo site.",
+  "00": "sch81e8ebd3e830906d",
+  "01": "sch9ca4465d58731181",
+  "02": "sch68262708d308addb",
+  "03": "sch5c4178b3e1ba0976",
+  "04": "sch6772e01bdd4d34e9",
+  "05": "schd382aec65d862db9",
+  "05.1": "schea08ccb882330caa",
+  "06": "schd56da25c7d63559b",
+  "06.1": "schfd58ca4f935f05c1"
+}

@@ -5,9 +5,15 @@ on:
     branches: ["main"]
   # Liberação dos sinais do rádio: todo dia às 00:10 em Brasília (03:10 UTC),
   # com uma reserva às 09:10 (12:10 UTC) caso a primeira atrase ou falhe.
+  # Sistema Schrödinger (parte2/secoes.json): de hora em hora, no minuto 17
+  # (fora da hora cheia, quando o cron do GitHub mais atrasa). O job
+  # "precisa" é barato: só builda se alguma seção já devia ter aberto e o site
+  # publicado ainda não tem (liberadas.json). O gatilho na hora exata vem de
+  # fora (cron-job.org/Cloudflare → workflow_dispatch); ver parte2/LANCAMENTO.md.
   schedule:
     - cron: "10 3 * * *"
     - cron: "10 12 * * *"
+    - cron: "17 * * * *"
   workflow_dispatch:
     inputs:
       data_simulada:
@@ -22,12 +28,40 @@ permissions:
 
 # O teste com data simulada tem fila própria: não cancela nem é cancelado por
 # uma publicação de verdade.
+# O cron de hora em hora NÃO cancela um build em andamento (ele só entra na
+# fila): senão uma checagem que vai pular o build derrubaria uma publicação.
 concurrency:
   group: ${{ github.event.inputs.data_simulada != '' && 'teste-radio' || 'pages' }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name != 'schedule' }}
 
 jobs:
+  # Checagem barata (sem Secrets, sem npm ci): no cron de hora em hora, compara
+  # as seções que já deviam estar abertas com o liberadas.json publicado.
+  # Nos outros gatilhos (push, cron do rádio, dispatch) sempre builda.
+  precisa:
+    runs-on: ubuntu-latest
+    outputs:
+      build: ${{ steps.decide.outputs.build }}
+    steps:
+      - name: Checkout
+        if: github.event_name == 'schedule' && github.event.schedule == '17 * * * *'
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            parte2
+            scripts
+      - name: Decidir
+        id: decide
+        run: |
+          if [ "${{ github.event_name }}" = "schedule" ] && [ "${{ github.event.schedule }}" = "17 * * * *" ]; then
+            node scripts/parte2-precisa.mjs
+          else
+            echo "build=true" >> "$GITHUB_OUTPUT"
+          fi
+
   build:
+    needs: precisa
+    if: needs.precisa.outputs.build == 'true'
     runs-on: ubuntu-latest
     env:
       # Vazio em push e schedule; preenchido só no teste manual.
@@ -53,6 +87,18 @@ jobs:
         env:
           RADIO_KEY: ${{ secrets.RADIO_KEY }}
         run: node scripts/liberar-sinais.mjs
+
+      # Sistema Schrödinger: copia/decifra para src/schrodinger/liberado/ só as
+      # seções cuja hora (parte2/secoes.json) já chegou e grava
+      # public/liberadas.json. Fase A em claro; B e C com a chave da fase.
+      # Sem a Secret de uma fase, avisa e aquelas seções seguem RECONECTANDO.
+      - name: Liberar seções do Sistema Schrödinger
+        env:
+          # A só é usada se um dia a fase A também for cifrada (parte2/LANCAMENTO.md)
+          PARTE2_KEY_A: ${{ secrets.PARTE2_KEY_A }}
+          PARTE2_KEY_B: ${{ secrets.PARTE2_KEY_B }}
+          PARTE2_KEY_C: ${{ secrets.PARTE2_KEY_C }}
+        run: node scripts/liberar-secoes.mjs
 
       # build + scripts/check-debug-leaks.js: se algo de debug escapar pro
       # dist/ (ou um sinal antes da data), o job falha aqui e o deploy não acontece.

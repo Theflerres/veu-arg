@@ -13,6 +13,7 @@
 import { readdirSync, readFileSync, statSync, existsSync } from "node:fs";
 import { join, relative, extname, resolve, basename } from "node:path";
 import { hojeSP, situacao } from "./sinais-radio.mjs";
+import { agoraParte2, canarios as canariosParte2, situacao as situacaoParte2 } from "./parte2.mjs";
 
 const DIST = resolve(process.argv[2] ?? "dist");
 
@@ -63,6 +64,10 @@ const PADROES = [
   { nome: "chave veu-apagao-forca", re: /apagao-forca/ },
   // Efeitos sonoros (src/app/sounds.ts e timer/radio.js): testeFx.tocar(nome), parar().
   { nome: "window.testeFx", re: /testeFx/ },
+  // Sistema Schrödinger (src/schrodinger/main.ts, relogio.ts): atalhos de
+  // console e a chave que simula a hora — só em dev.
+  { nome: "window.testeSchrodinger", re: /testeSchrodinger/ },
+  { nome: "chave sch-agora-teste", re: /agora-teste/ },
   // Termos que não podem ir ao ar de jeito nenhum (o Ç pode sair escapado no JS)
   { nome: "Dott", re: /Dott/ },
   { nome: "TRAÇA", re: /TRA(?:Ç|\\u00c7|\\xc7|&#199;|&Ccedil;)A/i },
@@ -176,6 +181,39 @@ for (const { n, data } of situacao(hojeRadio).bloqueados) {
 for (const arq of todos) {
   if (/^s\d+\.bin$/.test(basename(arq))) {
     vazamentos.push({ padrao: "blob cifrado do rádio", arquivo: relative(process.cwd(), arq).replaceAll("\\", "/"), contexto: "radio-cifrado/ não vai para o site" });
+  }
+}
+
+// Parte 2 (Sistema Schrödinger, parte2/secoes.json): cada seção tem um canário
+// (parte2/canarios.json) dentro do seu texto. Se o canário de uma seção ainda
+// fechada (pela hora real, ou PARTE2_DATA_SIMULADA/DATA_SIMULADA no teste)
+// aparecer em QUALQUER arquivo do dist, o deploy falha. Os blobs cifrados
+// (parte2-cifrado/) nunca vão para o dist, e liberadas.json não pode listar
+// seção fechada.
+{
+  const { ms: agoraP2, rotulo: rotuloP2 } = agoraParte2();
+  const { fechadas } = situacaoParte2(agoraP2);
+  const marcas = canariosParte2();
+  const vigiadas = fechadas.filter((s) => marcas[s.id]).map((s) => ({ s, marca: marcas[s.id] }));
+  const blobs = new Set(fechadas.concat(situacaoParte2(agoraP2).liberadas).map((s) => s.blob).filter(Boolean));
+  for (const arq of todos) {
+    const rel = relative(process.cwd(), arq).replaceAll("\\", "/");
+    if (blobs.has(basename(arq))) {
+      vazamentos.push({ padrao: "blob cifrado da Parte 2", arquivo: rel, contexto: "parte2-cifrado/ não vai para o site" });
+    }
+    if (statSync(arq).size > 50 * 1024 * 1024) continue;
+    const texto = readFileSync(arq, "latin1");
+    for (const { s, marca } of vigiadas) {
+      const i = texto.indexOf(marca);
+      if (i >= 0) vazamentos.push({ padrao: `seção ${s.id} antes da hora`, arquivo: rel, contexto: `canário encontrado; abre só em ${s.abre} (agora: ${rotuloP2})` });
+    }
+  }
+  const lib = join(DIST, "liberadas.json");
+  if (existsSync(lib)) {
+    const ids = JSON.parse(readFileSync(lib, "utf8")).ids || [];
+    for (const s of fechadas) {
+      if (ids.includes(s.id)) vazamentos.push({ padrao: `seção ${s.id} em liberadas.json`, arquivo: relative(process.cwd(), lib).replaceAll("\\", "/"), contexto: `abre só em ${s.abre}` });
+    }
   }
 }
 
