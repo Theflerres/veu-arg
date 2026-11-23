@@ -1,0 +1,71 @@
+{
+  "id": "00",
+  "canario": "sch81e8ebd3e830906d",
+  "titulo": "Acesso",
+  "resumo": "Aberta",
+  "blocos": [
+    {
+      "tipo": "inicializacao",
+      "titulo": "Sistema Schrödinger · Inicialização",
+      "meta": "Sessão de retorno",
+      "linhas": [
+        [
+          "Último encerramento",
+          "Data ilegível · há muito tempo"
+        ],
+        [
+          "Energia auxiliar",
+          "OK"
+        ],
+        [
+          "Núcleo",
+          "OK"
+        ],
+        [
+          "Rede de satélites",
+          "Desconectada"
+        ],
+        [
+          "Comunicações",
+          "Desconectadas"
+        ],
+        [
+          "Câmeras",
+          "Sem sinal"
+        ],
+        [
+          "Arquivos",
+          "Reconectando"
+        ],
+        [
+          "Operador",
+          "Hunter"
+        ],
+        [
+          "Status",
+          "Reconectando à rede"
+        ]
+      ]
+    },
+    {
+      "tipo": "ficha",
+      "titulo": "Ficha de acesso",
+      "meta": "Nº 0001",
+      "campos": [
+        [
+          "Titular",
+          "Hunter"
+        ],
+        [
+          "Gato",
+          "Observado"
+        ],
+        [
+          "Origem",
+          "[DADOS RETIDOS]"
+        ]
+      ]
+    }
+  ],
+  "subtitulo": "Log de inicialização"
+}

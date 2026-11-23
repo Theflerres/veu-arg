@@ -1,0 +1,433 @@
+/* ==========================================================================
+   SISTEMA SCHRÖDINGER — tema próprio (só esta entrada; não toca theme.css)
+   Tudo fica sob .sch (e .sch-doc no <html>). Paleta aprovada:
+   fundo #F6F9FC · tinta #1A52A0 (7,2:1) · linhas #688EBE (só linhas/ícones)
+   · alerta #C8323C (só OBSERVADO e erros, 5,0:1) · superfície #FFFFFF.
+   ========================================================================== */
+@import "@fontsource/jetbrains-mono/latin-400.css";
+@import "@fontsource/jetbrains-mono/latin-500.css";
+@import "@fontsource/jetbrains-mono/latin-700.css";
+@import "@fontsource/vt323/latin.css";
+
+.sch-doc, .sch-doc body { margin: 0; min-height: 100%; background: #F6F9FC; }
+
+.sch {
+  --sch-bg: #F6F9FC;
+  --sch-ink: #1A52A0;
+  --sch-ink-2: #688EBE;
+  --sch-alert: #C8323C;
+  --sch-surface: #FFFFFF;
+  --sch-line: rgba(104, 142, 190, .55);
+  --sch-line-soft: rgba(104, 142, 190, .22);
+  --sch-alert-soft: rgba(200, 50, 60, .08);
+  --sch-logo-contraste: #DCE8F5;
+  --sch-font: "JetBrains Mono", ui-monospace, Consolas, monospace;
+  --sch-focus: 0 0 0 2px var(--sch-bg), 0 0 0 4px var(--sch-ink);
+  --sch-ease: cubic-bezier(.2, .7, .2, 1);
+  min-height: 100vh;
+  background: var(--sch-bg);
+  color: var(--sch-ink);
+  font-family: var(--sch-font);
+  font-size: 16px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+.sch *, .sch *::before, .sch *::after { box-sizing: border-box; }
+.sch a { color: var(--sch-ink); }
+.sch :focus-visible { outline: none; box-shadow: var(--sch-focus); }
+.sch [hidden] { display: none !important; }
+.sch .so-leitor { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.sch .pular { position: absolute; left: 12px; top: -60px; z-index: 50; background: var(--sch-ink); color: var(--sch-bg); padding: 10px 14px; font-size: 13px; letter-spacing: .14em; text-transform: uppercase; }
+.sch .pular:focus { top: 12px; }
+
+/* ── tipografia ─────────────────────────────────────────────────────────── */
+.sch .t-sistema { font-weight: 700; letter-spacing: .32em; text-transform: uppercase; }
+.sch .t-titulo { font-weight: 700; letter-spacing: .14em; text-transform: uppercase; line-height: 1.15; }
+.sch .t-rotulo { font-size: 13px; font-weight: 500; letter-spacing: .18em; text-transform: uppercase; }
+.sch .t-mini { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; }
+
+/* ── barra ──────────────────────────────────────────────────────────────── */
+.sch .barra { height: 64px; display: flex; align-items: center; gap: 24px; padding: 0 40px; border-bottom: 1px solid var(--sch-line); background: var(--sch-bg); position: relative; z-index: 2; }
+.sch .barra .marca { display: flex; align-items: center; gap: 14px; text-decoration: none; }
+.sch .barra .marca .t-sistema { font-size: 15px; }
+.sch .barra nav { display: flex; gap: 4px; margin-left: 24px; }
+.sch .barra nav a { text-decoration: none; padding: 8px 14px; font-size: 13px; letter-spacing: .18em; text-transform: uppercase; border-bottom: 2px solid transparent; }
+.sch .barra nav a[aria-current] { border-bottom-color: var(--sch-ink); font-weight: 500; }
+.sch .barra .esp { flex: 1; }
+.sch .barra .sair { background: transparent; color: var(--sch-ink); font: inherit; font-size: 13px; letter-spacing: .18em; text-transform: uppercase; border: 1px solid var(--sch-line); padding: 7px 14px; cursor: pointer; }
+.sch .ladrilho { width: 38px; height: 38px; background: var(--sch-ink); display: grid; place-items: center; flex: none; }
+.sch .ladrilho img { width: 82%; height: 82%; object-fit: contain; }
+.sch .mudo { width: 36px; height: 36px; display: grid; place-items: center; background: transparent; border: 1px solid var(--sch-line); color: var(--sch-ink); cursor: pointer; padding: 0; }
+
+/* ── estado do gato / OBSERVADO ─────────────────────────────────────────── */
+.sch .gato { display: inline-flex; align-self: flex-start; align-items: stretch; border: 1px solid var(--sch-ink); background: var(--sch-surface); }
+.sch .gato .g-rot { padding: 10px 14px; border-right: 1px solid var(--sch-ink); font-size: 12px; letter-spacing: .18em; font-weight: 500; display: flex; align-items: center; }
+.sch .gato .g-cel { padding: 10px 16px; font-size: 12px; letter-spacing: .18em; border-right: 1px solid var(--sch-line); display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+.sch .gato .g-cel:last-child { border-right: 0; }
+.sch .gato .g-cel.ativo { background: var(--sch-ink); color: var(--sch-bg); font-weight: 500; }
+.sch .gato .g-cel.obs { background: var(--sch-alert); color: #fff; font-weight: 500; }
+.sch .gato .g-cel.sup { background: repeating-linear-gradient(90deg, transparent 0 4px, rgba(104,142,190,.12) 4px 8px); }
+.sch .pulso { width: 8px; height: 8px; border-radius: 50%; background: currentColor; animation: sch-pulso 2.4s var(--sch-ease) infinite; flex: none; }
+@keyframes sch-pulso { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: .35; transform: scale(.7); } }
+.sch .observado { display: inline-flex; align-items: center; gap: 10px; color: var(--sch-alert); border: 1px solid var(--sch-alert); background: var(--sch-alert-soft); padding: 7px 14px; font-size: 13px; font-weight: 500; letter-spacing: .18em; white-space: nowrap; }
+.sch .observado.nao { color: var(--sch-ink); border-color: var(--sch-ink); background: transparent; }
+
+/* ── campos e botões ────────────────────────────────────────────────────── */
+.sch .entrada { height: 58px; border: 1px solid var(--sch-ink); background: var(--sch-surface); color: var(--sch-ink); padding: 0 18px; font: 400 18px/1 var(--sch-font); letter-spacing: .1em; width: 100%; border-radius: 0; }
+.sch .entrada:focus { box-shadow: var(--sch-focus); }
+.sch .entrada.erro { border-color: var(--sch-alert); box-shadow: 0 0 0 2px var(--sch-bg), 0 0 0 4px var(--sch-alert); }
+.sch .botao { height: 58px; border: 1px solid var(--sch-ink); background: var(--sch-ink); color: var(--sch-bg); font: 500 14px/1 var(--sch-font); letter-spacing: .32em; text-transform: uppercase; padding: 0 28px; display: inline-flex; align-items: center; justify-content: center; gap: 14px; cursor: pointer; text-decoration: none; border-radius: 0; white-space: nowrap; }
+.sch .botao:disabled { background: transparent; color: var(--sch-ink); border-style: dashed; cursor: default; }
+.sch .ajuda-campo { font-size: 13px; letter-spacing: .06em; }
+
+/* ── caixa da logo (espécime com cantos) ────────────────────────────────── */
+.sch .caixa-logo { position: relative; background: var(--sch-bg); border: 1px solid var(--sch-line); display: grid; place-items: center; }
+.sch .caixa-logo img { width: 84%; height: 84%; object-fit: contain; }
+.sch .caixa-logo::before, .sch .caixa-logo::after, .sch .caixa-logo > .c3, .sch .caixa-logo > .c4 { content: ""; position: absolute; width: 18px; height: 18px; border: 0 solid var(--sch-ink); }
+.sch .caixa-logo::before { top: -1px; left: -1px; border-top-width: 2px; border-left-width: 2px; }
+.sch .caixa-logo::after { top: -1px; right: -1px; border-top-width: 2px; border-right-width: 2px; }
+.sch .caixa-logo > .c3 { bottom: -1px; left: -1px; border-bottom-width: 2px; border-left-width: 2px; }
+.sch .caixa-logo > .c4 { bottom: -1px; right: -1px; border-bottom-width: 2px; border-right-width: 2px; }
+
+/* ── ficha numerada e carimbo ───────────────────────────────────────────── */
+.sch .ficha { background: var(--sch-surface); border: 1px solid var(--sch-ink); position: relative; }
+.sch .ficha > header { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; padding: 14px 24px; border-bottom: 1px solid var(--sch-ink); }
+.sch .ficha .bloco { padding: 22px 24px; border-bottom: 1px solid var(--sch-line); display: flex; flex-direction: column; gap: 12px; }
+.sch .ficha .bloco:last-child { border-bottom: 0; }
+.sch .ficha .num { font-weight: 700; margin-right: 12px; }
+.sch .carimbo { display: inline-block; border: 2px solid currentColor; padding: 6px 14px; font-weight: 700; letter-spacing: .28em; text-transform: uppercase; transform: rotate(-4deg); background: var(--sch-bg); white-space: nowrap; }
+.sch .ic { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 1.5; stroke-linecap: square; flex: none; }
+.sch .ic-mini { width: 16px; height: 16px; }
+
+/* ── peças da Parte 2 ───────────────────────────────────────────────────── */
+.sch .tarja { display: inline-block; height: .7em; background: var(--sch-ink); vertical-align: 0; }
+.sch .retido { font-size: 11px; font-weight: 500; letter-spacing: .16em; text-transform: uppercase; border: 1px solid var(--sch-ink); padding: 1px 6px; white-space: nowrap; }
+.sch .trancado { display: flex; align-items: center; gap: 12px; border: 1px dashed var(--sch-ink-2); padding: 10px 14px; font-size: 13px; letter-spacing: .14em; text-transform: uppercase; }
+.sch .trancado .ic { color: var(--sch-ink-2); }
+.sch .trancado .dir { margin-left: auto; font-size: 12px; text-align: right; }
+.sch .log { margin: 0; padding: 0; list-style: none; font-size: 12.5px; letter-spacing: .06em; line-height: 1.5; }
+.sch .log li { display: grid; grid-template-columns: 74px 1fr; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--sch-line-soft); }
+.sch .log li:last-child { border-bottom: 0; }
+.sch .log time { font-variant-numeric: tabular-nums; }
+.sch .reconecta { height: 6px; border: 1px solid var(--sch-ink-2); position: relative; overflow: hidden; }
+.sch .reconecta::after { content: ""; position: absolute; inset: 0; width: 30%; background: repeating-linear-gradient(90deg, var(--sch-ink-2) 0 4px, transparent 4px 7px); animation: sch-reconecta 2.4s linear infinite; }
+@keyframes sch-reconecta { from { transform: translateX(-100%); } to { transform: translateX(340%); } }
+.sch .pagina { min-height: 100vh; display: grid; grid-template-rows: 64px 1fr; }
+.sch .migalha { font-size: 13px; letter-spacing: .14em; text-transform: uppercase; display: flex; gap: 10px; align-items: center; }
+.sch .cab-sec { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; }
+.sch .cab-sec h1 { font-size: 36px; margin: 6px 0; }
+.sch .cab-sec .meta { font-size: 13px; letter-spacing: .14em; text-transform: uppercase; }
+
+/* ── login ──────────────────────────────────────────────────────────────── */
+.sch .login { min-height: 100vh; display: grid; grid-template-rows: 64px 1fr 56px; grid-template-columns: minmax(0, 1fr); }
+.sch .login .topo, .sch .login .rodape { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 0 40px; font-size: 12px; letter-spacing: .14em; text-transform: uppercase; }
+.sch .login .topo { border-bottom: 1px solid var(--sch-line-soft); }
+.sch .login .topo .dir { display: flex; align-items: center; gap: 18px; margin-left: auto; }
+.sch .login .rodape { border-top: 1px solid var(--sch-line-soft); }
+.sch .login .centro { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px 16px; }
+.sch .login .caixa-logo { width: 220px; height: 220px; }
+.sch .login .caixa-logo svg { width: 84%; height: 84%; overflow: visible; }
+.sch .login .onda { width: 300px; height: 34px; margin-top: 12px; display: block; }
+.sch .login .onda path { fill: none; stroke: var(--sch-ink); stroke-width: 1.2; vector-effect: non-scaling-stroke; }
+.sch .login .onda line { stroke: var(--sch-ink-2); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.sch .login .miau { height: 34px; font-size: 26px; font-weight: 700; letter-spacing: .5em; margin: 4px 0 0 .5em; }
+.sch .login .miau .g { opacity: .55; }
+.sch .login h1 { font-size: 44px; margin: 18px 0 8px; text-align: center; }
+.sch .login .sub { font-size: 15px; letter-spacing: .2em; text-transform: uppercase; margin-bottom: 26px; }
+.sch .ficha-acesso { width: 640px; max-width: 100%; margin-top: 48px; }
+.sch .ficha-acesso .linha { display: flex; gap: 12px; }
+.sch .ficha-acesso .carimbo { position: absolute; right: -110px; top: -52px; font-size: 15px; color: var(--sch-ink); transform-origin: 50% 50%; }
+.sch .ficha-acesso .carimbo.obs { color: var(--sch-alert); }
+
+/* trava (chave): erro, espera de 3 s, linha do gato */
+.sch .erro-txt { color: var(--sch-alert); font-size: 14px; letter-spacing: .06em; display: flex; gap: 8px; align-items: center; margin: 0; }
+.sch .espera { height: 3px; background: var(--sch-line-soft); position: relative; overflow: hidden; }
+.sch .espera i { position: absolute; inset: 0; background: var(--sch-ink); transform-origin: 0 50%; animation: sch-espera linear forwards; }
+@keyframes sch-espera { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+.sch .clima { margin: 6px 0 0; padding-top: 14px; border-top: 1px solid var(--sch-line); font-size: 16px; letter-spacing: .04em; }
+/* verificando (cálculo da chave, ~0,3–1 s): barra indeterminada fina */
+.sch .verificando { height: 3px; background: var(--sch-line-soft); position: relative; overflow: hidden; }
+.sch .verificando i { position: absolute; inset: 0; width: 30%; background: var(--sch-ink); animation: sch-verifica 1s linear infinite; }
+@keyframes sch-verifica { from { transform: translateX(-100%); } to { transform: translateX(340%); } }
+.sch .verificando-txt { margin: 0; font-size: 14px; letter-spacing: .06em; }
+.sch .reg { display: flex; gap: 22px; font-size: 12px; letter-spacing: .12em; text-transform: uppercase; }
+.sch .reg b { font-weight: 500; }
+
+/* ── transição P3 → Schrödinger ─────────────────────────────────────────── */
+.sch-trans { position: fixed; inset: 0; background: #000; z-index: 100; overflow: hidden; cursor: default; }
+.sch-trans .q { position: absolute; inset: 0; opacity: 0; transition: opacity .3s; overflow: hidden; }
+.sch-trans .q.on { opacity: 1; }
+.sch-trans .p3 { background: #020503; color: #00FF66; font-family: "VT323", monospace; }
+.sch-trans .p3 .cab { position: absolute; top: 4vh; left: 4vw; right: 4vw; display: flex; justify-content: space-between; font-size: clamp(16px, 2.2vw, 34px); color: #2BEA7B; opacity: .8; gap: 12px; }
+.sch-trans .p3 .linhas { position: absolute; top: 15vh; left: 4vw; font-size: clamp(18px, 2.6vw, 44px); line-height: 1.5; text-shadow: 0 0 10px rgba(0,255,102,.6); }
+.sch-trans .p3 .linhas .fraco { opacity: .45; }
+.sch-trans .p3 .grande { position: absolute; inset: 0; display: grid; place-items: center; font-size: clamp(48px, 10vw, 190px); letter-spacing: .08em; text-align: center; text-shadow: 0 0 30px rgba(0,255,102,.8); }
+.sch-trans .q1.on .grande { animation: sch-pisca .5s steps(1) infinite; }
+@keyframes sch-pisca { 50% { opacity: 0; } }
+.sch-trans .crt::before { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(to bottom, transparent 0 3px, rgba(0,0,0,.28) 3px 6px); pointer-events: none; z-index: 5; }
+.sch-trans .crt::after { content: ""; position: absolute; inset: 0; background: radial-gradient(ellipse at center, transparent 35%, rgba(0,0,0,.85) 100%); pointer-events: none; z-index: 6; }
+.sch-trans .faixa { position: absolute; left: 0; right: 0; overflow: hidden; }
+.sch-trans .faixa.clara { z-index: 7; background: #F6F9FC; color: #1A52A0; font-family: "JetBrains Mono", monospace; }
+.sch-trans .faixa.escura { background: #020503; }
+.sch-trans .q2.on .faixa { animation: sch-rasga .18s steps(2) infinite; }
+@keyframes sch-rasga { 50% { transform: translateX(-40px); } }
+.sch-trans .q2 .msg { position: absolute; inset: 0 0 18vh 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3vh; z-index: 4; text-align: center; }
+.sch-trans .q2 .msg .a { font-family: "VT323", monospace; font-size: clamp(36px, 6.2vw, 120px); color: #00FF66; text-shadow: 0 0 24px rgba(0,255,102,.7); letter-spacing: .06em; }
+.sch-trans .q2 .msg .b { font-family: "JetBrains Mono", monospace; font-size: clamp(14px, 2vw, 40px); color: #1A52A0; background: #F6F9FC; padding: 8px 26px; letter-spacing: .3em; font-weight: 500; }
+.sch-trans .q3 { background: #020503; }
+.sch-trans .q3 .luz { position: absolute; top: 0; bottom: 0; left: 50%; width: 0; transform: translateX(-50%); background: #F6F9FC; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3vh; color: #1A52A0; font-family: "JetBrains Mono", monospace; overflow: hidden; text-align: center; }
+.sch-trans .q3.on .luz { animation: sch-abre 1.4s cubic-bezier(.2,.7,.2,1) forwards; }
+@keyframes sch-abre { from { width: 0; } to { width: 100%; } }
+.sch-trans .q3 .luz .t1 { font-size: clamp(22px, 3.8vw, 72px); font-weight: 700; letter-spacing: .32em; text-transform: uppercase; white-space: nowrap; }
+.sch-trans .q3 .luz .t2 { font-size: clamp(11px, 1.6vw, 30px); letter-spacing: .2em; text-transform: uppercase; white-space: nowrap; }
+.sch-trans .q3 .resto { position: absolute; top: 4vh; left: 4vw; font-family: "VT323", monospace; font-size: 44px; color: #00FF66; opacity: .55; }
+
+/* ── home ───────────────────────────────────────────────────────────────── */
+.sch .conteudo-home { padding: 44px 72px 40px; }
+.sch .cab { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 34px; gap: 24px; }
+.sch .cab h1 { font-size: 40px; margin: 0 0 8px; }
+.sch .cab .meta { font-size: 14px; letter-spacing: .14em; text-transform: uppercase; }
+.sch .progresso { display: flex; flex-direction: column; align-items: flex-end; gap: 10px; }
+.sch .segs { display: flex; gap: 6px; }
+.sch .segs i { width: 38px; height: 10px; border: 1px solid var(--sch-ink); }
+.sch .segs i.on { background: var(--sch-ink); }
+.sch .legenda { display: flex; gap: 22px; align-items: center; font-size: 12px; letter-spacing: .14em; text-transform: uppercase; }
+.sch .legenda span { display: inline-flex; gap: 8px; align-items: center; }
+.sch .legenda i { width: 22px; height: 12px; border: 1px solid var(--sch-ink); display: inline-block; }
+.sch .legenda i.idx { border-style: dashed; border-color: var(--sch-ink-2); }
+.sch .legenda i.ch { background: repeating-linear-gradient(90deg, var(--sch-ink) 0 2px, transparent 2px 5px); }
+.sch .grade { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 28px 24px; list-style: none; margin: 0; padding: 0; }
+.sch .cx { display: flex; flex-direction: column; min-height: 320px; height: 100%; color: var(--sch-ink); text-decoration: none; border-color: var(--sch-line); }
+.sch a.cx:hover { border-color: var(--sch-ink); }
+.sch .cx > header { padding: 12px 20px; border-bottom-color: var(--sch-line); align-items: center; }
+.sch .cx .corpo { flex: 1; padding: 16px 20px 18px; display: flex; flex-direction: column; gap: 10px; }
+.sch .cx h2 { font-size: 17px; letter-spacing: .12em; text-transform: uppercase; margin: 0; font-weight: 500; }
+.sch .cx .desenho { flex: 1; display: grid; place-items: center; color: var(--sch-ink-2); min-height: 92px; }
+.sch .cx .desenho svg { width: 92px; height: 92px; stroke: currentColor; fill: none; stroke-width: 1.2; }
+.sch .cx .estado { display: flex; align-items: center; gap: 10px; font-size: 13px; letter-spacing: .12em; text-transform: uppercase; border-top: 1px solid var(--sch-line-soft); padding-top: 12px; }
+.sch .cx.aberta { border-color: var(--sch-ink); }
+.sch .cx.aberta > header { border-bottom-color: var(--sch-ink); }
+.sch .cx.aberta .desenho { color: var(--sch-ink); }
+.sch .cx.chave { border-color: var(--sch-ink); }
+.sch .cx.reconectando { background: transparent; border-style: dashed; border-color: var(--sch-ink-2); }
+.sch .cx.reconectando > header { border-bottom-style: dashed; border-bottom-color: var(--sch-ink-2); }
+.sch .cx.reconectando .desenho svg { opacity: .55; stroke-dasharray: 3 3; }
+.sch .cx .pts::after { content: "…"; }
+.sch .cx .conta { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; display: flex; justify-content: space-between; gap: 8px; }
+.sch .cx .conta b { font-weight: 500; font-variant-numeric: tabular-nums; }
+.sch .cx .trancado { padding: 7px 10px; font-size: 11px; gap: 8px; }
+.sch .cx .trancado .ic { width: 16px; height: 16px; }
+.sch .cx .carimbo { position: absolute; right: 18px; top: 66px; font-size: 13px; }
+.sch .cx.status { background: transparent; border-style: dashed; }
+.sch .cx.status dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 12px 16px; font-size: 13px; letter-spacing: .1em; text-transform: uppercase; }
+.sch .cx.status dt { font-weight: 500; }
+.sch .cx.status dd { margin: 0; }
+
+/* ── página de seção ────────────────────────────────────────────────────── */
+.sch .conteudo-sec { padding: 26px 56px 40px; display: flex; flex-direction: column; gap: 22px; }
+.sch .stub { max-width: 720px; display: flex; flex-direction: column; gap: 16px; padding: 28px; }
+.sch .blocos { display: flex; flex-direction: column; gap: 22px; }
+.sch .bl-texto { max-width: 900px; }
+.sch .bl-texto p { font-size: 18px; line-height: 1.75; margin: 0 0 18px; }
+.sch .bl-ficha dl, .sch .destaque dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 10px 18px; font-size: 13px; letter-spacing: .1em; text-transform: uppercase; }
+.sch .bl-ficha dl { padding: 18px 24px; }
+.sch .bl-ficha dt, .sch .destaque dt { font-weight: 500; }
+.sch .bl-ficha dd, .sch .destaque dd { margin: 0; display: flex; align-items: center; gap: 8px; }
+.sch .destaques { display: grid; grid-template-columns: 1.25fr 1fr; gap: 22px; }
+.sch .destaque .corpo { display: grid; grid-template-columns: auto 1fr; gap: 24px; padding: 22px 24px 24px; align-items: start; }
+.sch .destaque .grande { font-size: 96px; font-weight: 700; line-height: .9; }
+.sch .destaque h2 { font-size: 22px; letter-spacing: .14em; text-transform: uppercase; margin: 2px 0 14px; font-weight: 700; }
+.sch .destaque.forte { border-width: 2px; }
+.sch .destaque .carimbo { position: absolute; right: 22px; top: 54px; font-size: 14px; }
+.sch .bl-arquivo .linha { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 12px; padding: 20px; margin: 0; list-style: none; }
+.sch .bk { border: 1px dashed var(--sch-ink-2); padding: 14px 12px 16px; display: flex; flex-direction: column; gap: 10px; min-height: 180px; }
+.sch .bk .n { font-size: 30px; font-weight: 500; color: var(--sch-ink); line-height: 1; }
+.sch .bk p { margin: 0; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; line-height: 1.45; }
+.sch .bl-arquivo .rodape { padding: 0 20px 18px; font-size: 12px; letter-spacing: .14em; text-transform: uppercase; }
+.sch .subsec.fechado { border-style: dashed; border-color: var(--sch-ink-2); background: transparent; }
+.sch .subsec .miolo { padding: 22px 24px; display: flex; flex-direction: column; gap: 16px; }
+.sch .cofre { display: flex; align-items: center; gap: 18px; }
+.sch .cofre svg { width: 56px; height: 56px; stroke: var(--sch-ink-2); stroke-width: 1.2; fill: none; flex: none; }
+.sch .cofre .t { font-size: 20px; font-weight: 700; letter-spacing: .28em; text-transform: uppercase; }
+.sch .cofre .s { font-size: 13px; letter-spacing: .14em; text-transform: uppercase; }
+
+/* log de inicialização (bloco "inicializacao") */
+.sch .boot { list-style: none; margin: 0; padding: 18px 24px 22px; font-size: 14px; letter-spacing: .1em; text-transform: uppercase; display: flex; flex-direction: column; gap: 9px; max-width: 760px; }
+.sch .boot li { display: flex; align-items: baseline; gap: 10px; animation: sch-linha .35s var(--sch-ease) both; }
+.sch .boot li::before { content: ">"; font-weight: 700; }
+.sch .boot .pontos { flex: 1; border-bottom: 2px dotted var(--sch-line); transform: translateY(-4px); min-width: 24px; }
+.sch .boot .v { display: inline-flex; align-items: center; gap: 8px; text-align: right; }
+.sch .boot .v.ok { font-weight: 700; }
+.sch .boot .v.falha { border: 1px dashed var(--sch-ink-2); padding: 0 6px; }
+.sch .boot .v.vivo { font-weight: 500; }
+@keyframes sch-linha { from { opacity: 0; transform: translateX(-6px); } }
+
+/* ── vigilância orbital ─────────────────────────────────────────────────── */
+.sch .vig { display: grid; grid-template-columns: minmax(0, 1fr) 440px; gap: 22px 40px; min-height: calc(100vh - 64px - 170px); }
+.sch .mapa-ficha { display: flex; flex-direction: column; min-height: 560px; }
+.sch .mapa-ficha > header { padding: 12px 20px; }
+.sch .mapa-ficha .corpo { flex: 1; min-height: 0; position: relative; }
+.sch .mapa { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.sch .mapa .anel { fill: none; stroke: var(--sch-ink-2); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.sch .mapa .anel.o { stroke-dasharray: 2 5; }
+.sch .mapa .eixo { stroke: var(--sch-line-soft); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.sch .mapa .tick { stroke: var(--sch-ink-2); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.sch .mapa text { fill: var(--sch-ink); font-family: var(--sch-font); font-size: 13px; letter-spacing: .12em; }
+.sch .mapa text.grau { font-size: 11px; fill: var(--sch-ink-2); }
+.sch .mapa .sat rect { fill: var(--sch-surface); stroke: var(--sch-ink); stroke-width: 1.4; vector-effect: non-scaling-stroke; }
+.sch .mapa .sat line { stroke: var(--sch-ink); stroke-width: 1.4; vector-effect: non-scaling-stroke; }
+.sch .mapa .sat.obs rect { fill: var(--sch-ink); }
+.sch .mapa .sat.off rect { fill: transparent; stroke: var(--sch-ink-2); stroke-dasharray: 2 2; }
+.sch .mapa .sat.off line { stroke: var(--sch-ink-2); }
+.sch .mapa .sat.sync rect { fill: var(--sch-logo-contraste); }
+.sch .mapa .anel-sync { fill: none; stroke: var(--sch-ink-2); stroke-width: 1; vector-effect: non-scaling-stroke; stroke-dasharray: 3 3; transform-box: fill-box; transform-origin: center; animation: sch-sync 1.2s var(--sch-ease) infinite; }
+@keyframes sch-sync { 0% { transform: scale(.6); opacity: 1; } 100% { transform: scale(1.4); opacity: 0; } }
+.sch .mapa text.rot-sat.off { fill: var(--sch-ink-2); }
+.sch .mapa .rot-rede { font-size: 13px; letter-spacing: .2em; font-weight: 500; }
+.sch .rede-corpo { display: flex; align-items: center; gap: 14px; padding: 12px 20px; border-bottom: 1px solid var(--sch-line-soft); }
+.sch .rede-corpo .rot { font-size: 12px; letter-spacing: .16em; text-transform: uppercase; font-weight: 500; white-space: nowrap; }
+.sch .rede-corpo .n { font-size: 26px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
+.sch .rede-corpo .n small { font-size: 15px; font-weight: 500; }
+.sch .segs-rede { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; flex: 1; }
+.sch .segs-rede i { height: 12px; border: 1px solid var(--sch-ink); }
+.sch .segs-rede i.online { background: var(--sch-ink); }
+.sch .segs-rede i.sincronizando { background: repeating-linear-gradient(90deg, var(--sch-ink) 0 2px, transparent 2px 5px); animation: sch-pulso 1.2s var(--sch-ease) infinite; }
+.sch .segs-rede i.aguardando { border-style: dashed; border-color: var(--sch-ink-2); }
+.sch .mapa .cone { fill: rgba(26, 82, 160, .07); stroke: var(--sch-ink-2); stroke-width: 1; vector-effect: non-scaling-stroke; stroke-dasharray: 4 4; }
+.sch .mapa .feixe { stroke: var(--sch-ink); stroke-width: 1; vector-effect: non-scaling-stroke; stroke-dasharray: 2 4; }
+.sch .mapa .reticulo path { fill: none; stroke: var(--sch-ink); stroke-width: 1.6; vector-effect: non-scaling-stroke; }
+.sch .mapa .reticulo.busca path { stroke-dasharray: 5 4; stroke: var(--sch-ink-2); }
+.sch .mapa .reticulo.trava path { stroke: var(--sch-alert); }
+.sch .mapa .alvo-sil { fill: none; stroke: var(--sch-ink-2); stroke-width: 1.2; vector-effect: non-scaling-stroke; stroke-dasharray: 3 4; }
+.sch .mapa .alvo-sil.obs { fill: var(--sch-logo-contraste); stroke: var(--sch-ink); stroke-dasharray: none; }
+.sch .mapa .rot-alvo { font-size: 16px; letter-spacing: .2em; }
+.sch .mapa .rot-alvo.obs { fill: var(--sch-alert); font-weight: 700; }
+.sch .leg-mapa { position: absolute; left: 20px; bottom: 16px; display: flex; gap: 18px; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; }
+.sch .leg-mapa span { display: inline-flex; gap: 8px; align-items: center; }
+.sch .vig .lado { display: flex; flex-direction: column; gap: 18px; min-height: 0; }
+.sch .vig .lado .ficha > header { padding: 12px 20px; }
+.sch .vig .lado .gato { align-self: stretch; }
+.sch .vig .lado .gato .g-rot, .sch .vig .lado .gato .g-cel { padding: 10px 11px; }
+.sch .alvo-linha { display: flex; justify-content: space-between; align-items: center; padding: 12px 20px 14px; font-size: 13px; letter-spacing: .12em; text-transform: uppercase; }
+.sch .sats { margin: 0; padding: 4px 20px 8px; list-style: none; }
+.sch .sats li { display: grid; grid-template-columns: 76px 74px 1fr auto; gap: 10px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--sch-line-soft); font-size: 12.5px; letter-spacing: .1em; text-transform: uppercase; }
+.sch .sats li:last-child { border-bottom: 0; }
+.sch .sats li.obs { font-weight: 700; }
+.sch .sats li.obs .st { color: var(--sch-alert); }
+.sch .sinal { display: inline-flex; gap: 2px; align-items: flex-end; height: 12px; }
+.sch .sinal i { width: 3px; background: var(--sch-ink); }
+.sch .sinal i.off { background: transparent; outline: 1px solid var(--sch-ink-2); outline-offset: -1px; }
+.sch .log-ficha { flex: 1; min-height: 220px; display: flex; flex-direction: column; }
+.sch .log-ficha .log { padding: 2px 20px 10px; overflow: hidden; flex: 1; }
+
+/* ── players ────────────────────────────────────────────────────────────── */
+.sch .resumo { display: flex; border: 1px solid var(--sch-ink); background: var(--sch-surface); align-self: flex-start; }
+.sch .resumo span { padding: 9px 16px; font-size: 12px; letter-spacing: .16em; text-transform: uppercase; border-right: 1px solid var(--sch-line); display: flex; gap: 10px; align-items: center; }
+.sch .resumo span:last-child { border-right: 0; }
+.sch .resumo b { font-weight: 700; }
+.sch .grade-pl { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 18px; list-style: none; margin: 0; padding: 0; }
+.sch .pl > header { padding: 8px 12px; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; align-items: center; }
+.sch .pl > header .obs { color: var(--sch-alert); font-weight: 500; display: inline-flex; gap: 6px; align-items: center; }
+.sch .pl > header .obs i { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.sch .foto { position: relative; aspect-ratio: 1 / 1; margin: 10px 12px 0; background: var(--sch-logo-contraste); overflow: hidden; }
+.sch .foto img { width: 100%; height: 100%; object-fit: cover; display: block; filter: grayscale(1) contrast(1.08) brightness(1.04); mix-blend-mode: multiply; image-rendering: pixelated; }
+.sch .foto::before, .sch .foto::after { content: ""; position: absolute; width: 14px; height: 14px; border: 0 solid var(--sch-ink); z-index: 1; }
+.sch .foto::before { top: 4px; left: 4px; border-top-width: 2px; border-left-width: 2px; }
+.sch .foto::after { bottom: 4px; right: 4px; border-bottom-width: 2px; border-right-width: 2px; }
+.sch .foto .faixa { position: absolute; left: 0; right: 0; bottom: 0; background: var(--sch-ink); color: var(--sch-bg); font-size: 10px; letter-spacing: .18em; text-transform: uppercase; padding: 3px 8px; }
+.sch .pl h2 { font-size: 15px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; margin: 10px 12px 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sch .pl dl { margin: 0; padding: 0 12px 12px; display: grid; grid-template-columns: auto 1fr; gap: 5px 10px; font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase; align-items: center; }
+.sch .pl dt { font-weight: 500; }
+.sch .pl dd { margin: 0; }
+.sch .pl .retido { font-size: 9.5px; padding: 0 4px; }
+
+/* ── telas médias ───────────────────────────────────────────────────────── */
+@media (max-width: 1500px) {
+  .sch .grade-pl { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+}
+@media (max-width: 1200px) {
+  .sch .grade { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .sch .vig { grid-template-columns: 1fr; }
+  .sch .mapa-ficha { min-height: 0; }
+  .sch .mapa-ficha .corpo { aspect-ratio: 5 / 3; flex: none; }
+  .sch .destaques { grid-template-columns: 1fr; }
+  .sch .grade-pl { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .sch .ficha-acesso .carimbo { right: 12px; top: -24px; }
+}
+
+/* ── mobile ─────────────────────────────────────────────────────────────── */
+@media (max-width: 600px) {
+  .sch .barra { height: 56px; padding: 0 14px; gap: 10px; }
+  .sch .barra nav, .sch .barra .sair-txt { display: none; }
+  .sch .barra .sair { padding: 6px 8px; font-size: 11px; letter-spacing: .1em; }
+  .sch .barra .marca { gap: 10px; }
+  .sch .barra .marca .t-sistema { font-size: 11px; letter-spacing: .18em; }
+  .sch .ladrilho { width: 32px; height: 32px; }
+  .sch .observado { padding: 5px 8px; font-size: 11px; gap: 6px; letter-spacing: .1em; }
+  .sch .pagina { grid-template-rows: 56px auto; }
+  .sch .login { grid-template-rows: 52px 1fr auto; }
+  .sch .login .topo { padding: 0 14px; }
+  .sch .login .topo .estado-sessao { display: none; }
+  .sch .login .rodape { flex-direction: column; align-items: flex-start; justify-content: center; padding: 14px 18px 30px; font-size: 11px; gap: 4px; }
+  .sch .login .centro { padding: 22px 16px; justify-content: flex-start; }
+  .sch .login .caixa-logo { width: 150px; height: 150px; }
+  .sch .login h1 { font-size: 22px; letter-spacing: .22em; }
+  .sch .ficha-acesso .linha { flex-direction: column; }
+  .sch .ficha-acesso .linha > .entrada { flex: 0 0 auto !important; } /* em coluna, flex:1 achatava o campo */
+  .sch .ficha-acesso .carimbo { right: 8px; top: -22px; font-size: 12px; }
+  .sch .ficha > header { padding: 12px 16px; }
+  .sch .ficha .bloco { padding: 16px; }
+  .sch .gato { align-self: stretch; }
+  .sch .gato .g-rot { display: none; }
+  .sch .gato .g-cel { flex: 1; justify-content: center; padding: 10px 4px; font-size: 10.5px; letter-spacing: .06em; white-space: normal; text-align: center; }
+  .sch .login h1 { max-width: 100%; overflow-wrap: anywhere; }
+  .sch .pagina { grid-template-columns: minmax(0, 1fr); }
+  .sch .conteudo-home { padding: 22px 16px 40px; }
+  .sch .cab { flex-direction: column; align-items: flex-start; gap: 14px; margin-bottom: 22px; }
+  .sch .cab h1 { font-size: 26px; }
+  .sch .cab .meta { font-size: 12px; }
+  .sch .progresso { align-items: flex-start; }
+  .sch .legenda { flex-wrap: wrap; gap: 8px 14px; font-size: 10.5px; }
+  .sch .segs i { width: 30px; }
+  .sch .grade { grid-template-columns: 1fr; gap: 14px; }
+  .sch .cx { min-height: 0; }
+  .sch .cx > header { padding: 8px 14px; }
+  .sch .cx .corpo { display: grid; grid-template-columns: 50px 1fr; column-gap: 14px; row-gap: 8px; padding: 12px 14px; }
+  .sch .cx .corpo > * { grid-column: 2; }
+  .sch .cx h2 { font-size: 14px; }
+  .sch .cx .desenho { grid-column: 1; grid-row: 1 / span 2; min-height: 0; }
+  .sch .cx .desenho svg { width: 46px; height: 46px; }
+  .sch .cx .estado { border-top: 0; padding-top: 0; font-size: 11px; }
+  .sch .cx .conta { flex-direction: column; gap: 2px; }
+  .sch .cx .chave-inline { grid-column: 1 / span 2; }
+  .sch .cx .carimbo { display: none; }
+  .sch .conteudo-sec { padding: 18px 16px 40px; gap: 16px; }
+  .sch .cab-sec { flex-direction: column; align-items: flex-start; gap: 10px; }
+  .sch .cab-sec h1 { font-size: 22px; }
+  .sch .mapa-ficha .corpo { aspect-ratio: 1 / 1; }
+  .sch .mapa text { font-size: 24px; }
+  .sch .mapa text.grau, .sch .leg-mapa { display: none; }
+  .sch .mapa .rot-alvo { font-size: 22px; }
+  .sch .sats li { grid-template-columns: 64px 58px 1fr auto; font-size: 11px; gap: 6px; }
+  .sch .log li { grid-template-columns: 64px 1fr; font-size: 11px; }
+  .sch .resumo { align-self: stretch; }
+  .sch .resumo span { padding: 7px 8px; font-size: 10px; letter-spacing: .1em; flex: 1; justify-content: center; }
+  .sch .grade-pl { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .sch .pl > header { padding: 6px 8px; font-size: 9.5px; }
+  .sch .foto { margin: 8px 8px 0; }
+  .sch .pl h2 { font-size: 13px; margin: 8px 8px 4px; }
+  .sch .pl dl { padding: 0 8px 10px; font-size: 9.5px; gap: 4px 6px; }
+  .sch .destaque .corpo { grid-template-columns: 1fr; }
+  .sch .destaque .grande { font-size: 64px; }
+  .sch .bl-texto p { font-size: 16px; }
+  .sch .boot { font-size: 11.5px; letter-spacing: .06em; padding: 14px 16px 18px; }
+  .sch .boot li { flex-wrap: wrap; }
+  .sch .reg { flex-direction: column; gap: 4px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sch *, .sch *::before, .sch *::after, .sch-trans *, .sch-trans *::before, .sch-trans *::after { animation: none !important; transition: none !important; }
+  .sch .espera i { transform: scaleX(0); }
+  .sch .verificando i { width: 100%; opacity: .4; }
+  .sch-trans .q3 .luz { width: 100%; }
+}
