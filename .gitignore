@@ -20,3 +20,23 @@ refs/
 
 # Modelo 3D do modo de inspeção do hub — publicar só com git add -f
 src/bott/assets/*.gltf
+
+# Cache do Python das ferramentas de mockup
+mockups/_ferramentas/__pycache__/
+
+# Áudio original de terceiros (licença não confirmada) — não redistribuir pelo repo
+assets-novos/audio/original/
+mockups/audio/sound_garage-*
+
+# Mockups e documentos de planejamento do Sistema Schrödinger: revelam lore e
+# nomes de seções antes da hora — nunca versionar (repo público)
+mockups/
+__pycache__/
+
+# Parte 2 (Sistema Schrödinger): texto-fonte das seções e chaves — só local.
+# No repo ficam só os blobs cifrados (parte2-cifrado/). O decifrado é criado
+# no build (src/schrodinger/liberado/) e o índice público (public/liberadas.json)
+# também é gerado ali.
+parte2-fonte/
+src/schrodinger/liberado/
+public/liberadas.json
